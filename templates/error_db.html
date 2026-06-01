@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error de Base de Datos · Gestión{% endblock %}
+
+{% block content %}
+  <section class="card" style="min-height:200px;display:flex;flex-direction:column;gap:12px;">
+    <h2 style="color:#b91c1c;">Error de conexión con la base de datos</h2>
+    <p>{{ message or 'Ocurrió un error al acceder a la base de datos. Intente de nuevo más tarde.' }}</p>
+    <a href="{{ url_for('inicio') }}" class="btn">Volver al inicio</a>
+  </section>
+{% endblock %}

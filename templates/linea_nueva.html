@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Nueva línea</title>
+  <style>
+    :root{
+      --brand-primary: #154235;
+      --brand-accent: #2b6e5c;
+      --brand-muted: #6b7280;
+      --bg: #f7fafc;
+      --card-bg: #ffffff;
+      --card-border: rgba(15,23,42,0.06);
+      --danger: #dc2626;
+      --success: #16a34a;
+    }
+    html,body{height:100%; margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#0f172a; background:linear-gradient(180deg,var(--bg),#ffffff 60%)}
+    .container{max-width:1100px; margin:22px auto}
+    .brand-header{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+    .brand-logo{width:56px; height:56px; border-radius:8px; background:linear-gradient(135deg,var(--brand-primary),var(--brand-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; box-shadow:0 6px 20px rgba(16,24,40,0.08); overflow:hidden}
+    h2{margin:0; font-size:20px}
+    .subtitle{color:var(--brand-muted); font-size:13px}
+
+    .card{background:var(--card-bg); border:1px solid var(--card-border); padding:22px; border-radius:12px; box-shadow:0 10px 30px rgba(2,6,23,0.04)}
+    form .row{display:grid; grid-template-columns: 1fr 1fr; gap:22px; align-items:start}
+    .col{min-width:0}
+    .field{margin-bottom:14px}
+    label{display:block; font-weight:600; margin-bottom:6px; color:#0f172a}
+    .required:after{content:" *"; color:var(--danger); font-weight:700}
+
+    input[type=text], input[type=number], input[type=email], select, textarea{
+      width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,0.08); border-radius:10px; font-size:14px; background:linear-gradient(180deg,#fff,#fbfdff);
+      transition:box-shadow .12s, border-color .12s, transform .04s;
+    }
+    .field > input, .field > select, .field > textarea{ box-sizing: border-box; width:100%; max-width:100% }
+    input:focus, select:focus, textarea:focus{outline:none; box-shadow:0 6px 18px rgba(14,165,233,0.08); border-color:var(--brand-primary)}
+    textarea{resize:vertical}
+    .inline{display:flex; gap:10px; align-items:center}
+    .inline input[type="text"], .inline select, .inline textarea{flex:1 1 auto; min-width:0}
+    .inline .btn{flex:0 0 auto}
+    .list-results{position:absolute; z-index:9999; left:0; top:100%; margin-top:8px; box-sizing:border-box; min-width:220px; max-width:520px; width:100%; border:1px solid var(--card-border); max-height:240px; overflow:auto; background:var(--card-bg); border-radius:8px; box-shadow:0 14px 40px rgba(2,6,23,0.08); padding:6px 0}
+    .list-results div{padding:8px 12px; cursor:pointer; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .list-results div:hover{background:#f8fafc}
+    .list-results div.focused{background:#e6f7f0}
+    .controls{display:flex; gap:8px; align-items:center}
+
+    .btn{padding:10px 12px; border-radius:10px; border:1px solid transparent; cursor:pointer; background:#f3f4f6; font-weight:600}
+    .btn-primary{background:var(--brand-primary); color:#fff; box-shadow:0 8px 24px rgba(21,66,53,0.12); border:none}
+    .btn-primary:hover{filter:brightness(1.05); transform:translateY(-2px)}
+    .btn-ghost{background:transparent; border:1px solid var(--brand-primary); color:var(--brand-primary); padding:8px 10px}
+    .btn-ghost:hover{background:rgba(21,66,53,0.06)}
+    .btn:active{transform:translateY(1px)}
+
+    .muted{color:var(--brand-muted); font-size:13px}
+    .form-actions{display:flex; gap:12px; margin-top:18px}
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(2,6,23,0.35)}
+    .modal .panel{background:#fff; padding:18px; width:720px; max-width:95%; border-radius:12px; box-shadow:0 20px 60px rgba(2,6,23,0.2)}
+    .modal .panel h3{margin-top:0}
+    @media (max-width:980px){ form .row{grid-template-columns: 1fr } }
+
+    /* Toasts */
+    #toast-container{position:fixed; right:18px; bottom:18px; z-index:9999; display:flex; flex-direction:column; gap:10px}
+    .toast{min-width:200px; padding:10px 14px; border-radius:10px; color:#fff; box-shadow:0 10px 30px rgba(2,6,23,0.12); transform:translateY(6px); opacity:0; transition:all .28s cubic-bezier(.2,.9,.2,1)}
+    .toast.show{transform:translateY(0); opacity:1}
+    .toast.success{background:var(--success)}
+    .toast.error{background:var(--danger)}
+    .toast.info{background:#0f172a}
+
+    #btn-back{padding:8px 10px; border-radius:8px; border:1px solid rgba(15,23,42,0.06); background:transparent; display:inline-flex; align-items:center; justify-content:center; font-weight:600; color:var(--brand-primary); cursor:pointer}
+    #btn-back:hover{background:rgba(21,66,53,0.04)}
+  </style>
+    <style>
+      /* Force Edit Jefe button to receive clicks above overlays during debugging */
+      #btn-edit-jefe{ position:relative; z-index:2147483646; pointer-events:auto; }
+    </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand-header">
+      
+      <div class="brand-logo">
+        <img src="{{ url_for('static', filename='img/logomega.png') }}?v=1" alt="Logo" style="width:44px;height:44px;object-fit:cover;display:block">
+      </div>
+      <div>
+        <h2>Nueva Línea</h2>
+        <div class="subtitle">Registro y creación de líneas telefónicas</div>
+      </div>
+          
+    <button type="button" id="btn-back" title="Volver">← Volver</button></div>
+          
+    <div class="card">
+      <form id="form-linea">
+        <div class="row">
+          <div class="col">
+            <div class="field">
+              <label class="required" for="numero_linea">Número de línea</label>
+              <div class="inline">
+                <input type="text" name="numero_linea" id="numero_linea" required placeholder="Ej: 3001234567" autofocus style="flex:1">
+                <button type="button" id="btn-check-numero" class="btn btn-ghost" title="Verificar número">Verificar</button>
+              </div>
+              <div id="numero-check-result" style="margin-top:6px; font-size:0.95em; color:#444;"></div>
+            </div>
+
+            <div class="field">
+              <label class="required" for="sel-regional">Regional</label>
+              <div class="inline">
+                <select id="sel-regional" name="id_regional" required>
+                  <option value="">-- Seleccionar --</option>
+                  {% for r in regionales %}
+                    <option value="{{ r.id_regional }}">{{ r.nombre_regional }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" id="btn-new-regional" class="btn btn-ghost">+ Nuevo</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="required" for="sel-ciudad">Ciudad</label>
+              <div class="inline">
+                <select id="sel-ciudad" name="id_ciudad" required style="flex:1">
+                  <option value="">-- Seleccionar --</option>
+                  {% for c in ciudades %}
+                    <option value="{{ c.id_ciudad }}" data-regional="{{ c.id_regional }}">{{ c.nombre_ciudad }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" id="btn-new-ciudad" class="btn btn-ghost">+ Nuevo</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="required" for="sel-jefe">Jefe</label>
+              <div class="inline">
+                <select id="sel-jefe" name="id_jefe" required style="flex:1">
+                  <option value="">-- Seleccionar --</option>
+                </select>
+                <button type="button" id="btn-new-jefe" class="btn btn-ghost">+ Nuevo</button>  
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="field relative">
+              <label class="required" for="user-search">Usuario</label>
+              <div class="inline">
+                <input type="text" id="user-search" placeholder="Buscar por nombre..." aria-label="Buscar usuario" style="flex:1">
+                <button type="button" id="btn-new-user" class="btn btn-ghost">+ Nuevo</button>
+                <button type="button" id="btn-edit-user" class="btn btn-ghost" title="Editar usuario">Editar</button>
+              </div>
+              <input type="hidden" name="id_usuario" id="id_usuario_input">
+              <div id="user-results" class="list-results" style="display:none"></div>
+              <div id="user-noresults" class="muted" style="display:none; margin-top:6px">No se encontraron usuarios.</div>
+            </div>
+
+            <div class="field">
+              <label for="sel-plan">Plan</label>
+              <div class="inline">
+                <select id="sel-plan" name="id_plan" style="flex:1">
+                  <option value="">-- Seleccionar --</option>
+                  {% for p in planes %}
+                    <option value="{{ p.id_plan }}">{{ p.nombre_plan }}{% if p.gigas is none %} (Ilimitadas){% else %} - {{ p.gigas }} GB{% endif %}{% if p.precio_mensual is not none %} - ${{ p.precio_mensual|col_currency }}{% endif %}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" id="btn-new-plan" class="btn btn-ghost">+ Nuevo</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="id_tipo_sim">Tipo SIM</label>
+              <select name="id_tipo_sim" id="id_tipo_sim">
+                <option value="">-- Seleccionar --</option>
+                {% for t in tipos_sim %}
+                  <option value="{{ t.id_tipo_sim }}">{{ t.nombre_tipo }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="id_estado">Estado</label>
+              <select name="id_estado" id="id_estado">
+                <option value="">-- Seleccionar --</option>
+                {% for e in estados %}
+                  <option value="{{ e.id_estado }}">{{ e.nombre_estado }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="observacion">Observación</label>
+          <textarea name="observacion" id="observacion" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Guardar Línea</button>
+          <a href="{{ url_for('home_listado_lineas') }}" class="btn">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Modal Usuario -->
+  <div id="modal-user" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modal-user-title">
+      <h3 id="modal-user-title">Nuevo Usuario</h3>
+      <form id="form-new-user">
+        <div class="row">
+          <div class="col">
+            <div class="field"><label class="required">Nombre</label><input name="nombre" id="nu-nombre" required></div>
+            <div class="field"><label class="required">Cargo</label>
+              <div class="inline">
+                <select name="id_cargo" id="nu-cargo" required style="flex:1">
+                  <option value="">-- Seleccionar --</option>
+                  {% for c in cargos %}
+                    <option value="{{ c.id_cargo }}">{{ c.nombre_cargo }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" id="btn-new-cargo" class="btn btn-ghost">+ Nuevo</button>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="field"><label class="required">Regional</label>
+              <select id="nu-regional" required>
+                <option value="">-- Seleccionar --</option>
+                {% for r in regionales %}
+                  <option value="{{ r.id_regional }}">{{ r.nombre_regional }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field"><label class="required">Ciudad</label>
+              <select id="nu-ciudad" name="id_ciudad" required disabled>
+                <option value="">-- Seleccionar --</option>
+                {% for c in ciudades %}
+                  <option value="{{ c.id_ciudad }}" data-regional="{{ c.id_regional }}">{{ c.nombre_ciudad }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field"><label class="required">Jefe</label>
+              <select id="nu-jefe" name="id_jefe" required>
+                <option value="">-- Seleccionar --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" id="nu-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="nu-save" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Plan (estático) -->
+  <div id="modal-plan" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <h3>Nuevo Plan</h3>
+      <form id="form-new-plan">
+        <div class="field"><label class="required">Nombre</label><input id="np-nombre" required></div>
+        <div class="field"><label>Gigas</label><input id="np-gigas" type="number" min="0"></div>
+        <div class="field"><label><input id="np-ilimitadas" type="checkbox"> Ilimitadas</label></div>
+        <div class="field"><label>Precio mensual</label><input id="np-precio" type="text" placeholder="12.000 o 12.000,50"></div>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" id="nu-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="nu-save" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Ciudad (estático) -->
+  <div id="modal-ciudad" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <h3>Nueva Ciudad</h3>
+      <form id="form-new-ciudad">
+        <div class="field"><label class="required">Nombre ciudad</label><input id="nc-ciudad" required></div>
+        <div class="field"><label class="required">Regional</label>
+          <select id="nc-ciudad-regional" required>
+            <option value="">-- Seleccionar --</option>
+            {% for r in regionales %}
+              <option value="{{ r.id_regional }}">{{ r.nombre_regional }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" id="nci-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="nci-save" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+    <!-- Modal Regional (estático) -->
+    <div id="modal-regional" class="modal" aria-hidden="true">
+      <div class="panel" role="dialog" aria-modal="true">
+        <h3>Nueva Regional</h3>
+        <form id="form-new-regional">
+          <div class="field"><label class="required">Nombre regional</label><input id="nr-nombre" required></div>
+          <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+            <button type="button" id="nr-cancel" class="btn">Cancelar</button>
+            <button type="submit" id="nr-save" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  <!-- Modal Jefe (estático, MULTI-regional) -->
+  <div id="modal-jefe" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <h3>Nuevo Jefe</h3>
+      <form id="form-new-jefe">
+        <div class="field"><label class="required">Nombre jefe</label><input id="nj-nombre" required></div>
+        <div class="field"><label class="required">Regional</label>
+          <select id="nj-regional" multiple size="6" required>
+            <option value="">-- Seleccionar --</option>
+            {% for r in regionales %}
+              <option value="{{ r.id_regional }}">{{ r.nombre_regional }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" id="nj-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="nj-save" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Cargo (estático) -->
+  <div id="modal-cargo" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <h3>Nuevo Cargo</h3>
+      <form id="form-new-cargo">
+        <div class="field"><label class="required">Nombre cargo</label><input id="nc-nombre" required></div>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" id="nc-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="nc-save" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ========= Helpers =========
+    function qs(sel, ctx=document){ return ctx.querySelector(sel); }
+    function qsa(sel, ctx=document){ return Array.from(ctx.querySelectorAll(sel)); }
+    function showToast(msg, type='info', ttl=3000){
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast ' + (type || 'info');
+      el.textContent = msg;
+      container.appendChild(el);
+      requestAnimationFrame(()=> el.classList.add('show'));
+      setTimeout(()=> el.classList.remove('show'), Math.max(300, ttl-300));
+      setTimeout(()=> el.remove(), ttl);
+    }
+    try{ window.safeToast = window.safeToast || showToast; }catch(_e){}
+
+    // Close modal helper: blur any focused element inside the modal before hiding it
+    function closeModal(modal){
+      try{
+        if(!modal) return;
+        const active = document.activeElement;
+        if(active && modal.contains(active)){
+          try{ active.blur(); }catch(_e){}
+        }
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+      }catch(_e){ console.error('closeModal failed', _e); }
+    }
+    // Monkey-patch setAttribute to defensively blur focused elements before they get hidden via aria-hidden
+    (function(){
+      try{
+        const _origSet = Element.prototype.setAttribute;
+        Element.prototype.setAttribute = function(name, value){
+          try{
+            if(String(name) === 'aria-hidden' && String(value) === 'true'){
+              const active = document.activeElement;
+              if(active && this.contains && this.contains(active)){
+                try{ active.blur(); }catch(_e){}
+              }
+            }
+          }catch(_e){}
+          return _origSet.call(this, name, value);
+        };
+      }catch(_e){ console.error('setAttribute monkeypatch failed', _e); }
+    })();
+
+    function formatColCurrency(val){
+      if(val === null || val === undefined || val === '') return '';
+      const n = Number(val);
+      if(!isFinite(n)) return String(val);
+      if(Number.isInteger(n)) return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const parts = n.toFixed(2).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return parts[0] + ',' + parts[1];
+    }
+
+    // Fetch jefes for a regional and populate a target select element
+    async function fetchJefesForRegional(regionalVal){
+      if(!regionalVal){ return []; }
+      try{
+        const resp = await fetch('/api/jefes?id_regional='+encodeURIComponent(regionalVal));
+        if(!resp.ok) return [];
+        const data = await resp.json();
+        return Array.isArray(data) ? data : [];
+      }catch(e){ return []; }
+    }
+
+    function populateSelectWithJefes(selectEl, jefes, preferredId = null){
+      if(!selectEl) return;
+      const existingValue = selectEl.value || preferredId || '';
+      // clear but keep placeholder
+      const placeholder = selectEl.querySelector('option[value=""]');
+      selectEl.innerHTML = '';
+      if(placeholder) selectEl.appendChild(placeholder);
+      // dedupe by id and ensure alphabetical order
+      const map = new Map();
+      (jefes || []).forEach(j => { if(j && j.id_jefe) map.set(Number(j.id_jefe), j.nombre_jefe); });
+      const items = Array.from(map.entries()).map(([id,name])=>({id,name}));
+      items.sort((a,b)=> a.name.localeCompare(b.name, 'es', {sensitivity:'base'}));
+      items.forEach(it => {
+        const o = document.createElement('option');
+        o.value = it.id;
+        o.textContent = it.name;
+        selectEl.appendChild(o);
+      });
+      const realOptions = Array.from(selectEl.options).filter(o => o.value !== '');
+      const desiredValue = preferredId || existingValue;
+      if(desiredValue && realOptions.some(o => String(o.value) === String(desiredValue))){
+        selectEl.value = desiredValue;
+      } else if(realOptions.length === 1){
+        selectEl.value = realOptions[0].value;
+      } else {
+        selectEl.value = '';
+      }
+      // Trigger change so any listeners (eg. edit-button enabler) update
+      try{ selectEl.dispatchEvent(new Event('change', { bubbles: true })); }catch(_e){}
+      // Also defensively enable/disable the Edit button to avoid race conditions
+      try{
+        const btn = document.getElementById('btn-edit-jefe');
+        if(btn){ btn.disabled = !(selectEl && selectEl.value); }
+      }catch(_e){}
+      // Dispatch input event too for any other potential listeners
+      try{ selectEl.dispatchEvent(new Event('input', { bubbles: true })); }catch(_e){}
+    }
+
+    // Filter cities and update jefe select by loading appropriate jefes for the regional
+    async function filterByRegional(regionalVal, preferredId = null){
+      qsa('#sel-ciudad option[data-regional]').forEach(o => {
+        const match = (o.dataset.regional === regionalVal || regionalVal === '');
+        try{ o.hidden = !match; o.disabled = !match; }catch(_e){ o.style.display = match ? '' : 'none'; }
+      });
+      const selJ = qs('#sel-jefe');
+      if(!regionalVal){
+        populateSelectWithJefes(selJ, [], preferredId);
+        return;
+      }
+      const jefes = await fetchJefesForRegional(regionalVal);
+      populateSelectWithJefes(selJ, jefes, preferredId);
+    }
+
+    async function filterModalByRegional(regVal, preferredId = null){
+      qsa('#nu-ciudad option[data-regional]').forEach(o => {
+        const match = (o.dataset.regional === regVal || regVal === '');
+        try{ o.hidden = !match; o.disabled = !match; }catch(_e){ o.style.display = match ? '' : 'none'; }
+      });
+      const nuJ = qs('#nu-jefe');
+      if(!regVal){ populateSelectWithJefes(nuJ, [], preferredId); return; }
+      const jefes = await fetchJefesForRegional(regVal);
+      populateSelectWithJefes(nuJ, jefes, preferredId);
+    }
+
+    // ========= Main =========
+    document.addEventListener('DOMContentLoaded', () => {
+      const selRegional = qs('#sel-regional');
+      if(selRegional){ selRegional.addEventListener('change', function(){ filterByRegional(this.value); }); filterByRegional(selRegional.value); }
+
+      // ---------- Buscar usuarios ----------
+      const userSearch = qs('#user-search');
+      const results = qs('#user-results');
+      const noresults = qs('#user-noresults');
+      const idUsuarioInput = qs('#id_usuario_input');
+      let debounce = null;
+      let resultsIndex = -1;
+
+      function clearResultsFocus(){
+        resultsIndex = -1;
+        Array.from(results.children || []).forEach(d=> d.classList && d.classList.remove('focused'));
+      }
+
+      function setResultsFocus(i){
+        const items = Array.from(results.children || []);
+        if(!items.length) return;
+        if(i < 0) i = 0; if(i >= items.length) i = items.length - 1;
+        resultsIndex = i;
+        items.forEach((it, idx)=>{ if(idx===i) it.classList.add('focused'); else it.classList.remove('focused'); });
+        const el = items[resultsIndex]; if(el && el.scrollIntoView) el.scrollIntoView({block:'nearest'});
+      }
+
+      userSearch && userSearch.addEventListener('input', function(){
+        clearTimeout(debounce);
+        const q = this.value.trim();
+        debounce = setTimeout(async () => {
+          if(!q){ results.style.display='none'; noresults.style.display='none'; return; }
+          try{
+            const resp = await fetch('/api/usuarios?search='+encodeURIComponent(q));
+            const data = await resp.json();
+            results.innerHTML = '';
+            if(data && data.length){
+              data.forEach((u, idx) => {
+                const div = document.createElement('div');
+                div.textContent = u.nombre;
+                div.dataset.id = u.id_usuario;
+                div.dataset.rindex = idx;
+                div.tabIndex = -1;
+                div.addEventListener('click', ()=>{
+                  idUsuarioInput.value = u.id_usuario;
+                  userSearch.value = u.nombre;
+                  try{ results.style.display='none'; results.style.left=''; results.style.top=''; resultsIndex = -1; }catch(_e){}
+                  noresults.style.display='none';
+                });
+                div.addEventListener('mouseenter', ()=>{ setResultsFocus(idx); });
+                results.appendChild(div);
+              });
+              // reset focus index
+              resultsIndex = -1;
+              // position results under the input using fixed coords (robust across containers)
+              try{
+                const ir = userSearch.getBoundingClientRect();
+                results.style.position = 'fixed';
+                results.style.left = ir.left + 'px';
+                results.style.top = (ir.bottom + 6) + 'px';
+                results.style.width = Math.max(220, ir.width) + 'px';
+                results.style.zIndex = 2147483647;
+              }catch(_e){}
+              results.style.display = 'block';
+              noresults.style.display='none';
+            } else {
+              results.style.display='none';
+              noresults.style.display='block';
+            }
+          }catch(err){
+            console.error('Usuarios fetch error', err);
+            results.style.display='none'; noresults.style.display='block';
+          }
+        }, 300);
+      });
+
+      // allow pressing Enter to pick the first result and handle blur to resolve typed exact matches
+      userSearch && userSearch.addEventListener('keydown', function(e){
+        const items = Array.from(results.children || []);
+        if(e.key === 'ArrowDown'){
+          e.preventDefault();
+          if(items.length){
+            const next = (resultsIndex === -1) ? 0 : Math.min(resultsIndex + 1, items.length - 1);
+            setResultsFocus(next);
+          }
+          return;
+        }
+        if(e.key === 'ArrowUp'){
+          e.preventDefault();
+          if(items.length){
+            const prev = (resultsIndex === -1) ? items.length - 1 : Math.max(resultsIndex - 1, 0);
+            setResultsFocus(prev);
+          }
+          return;
+        }
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          if(resultsIndex !== -1 && items[resultsIndex]){
+            const itm = items[resultsIndex];
+            itm.click();
+          } else {
+            const first = items[0];
+            if(first){ first.click(); }
+          }
+          return;
+        }
+      });
+
+      userSearch && userSearch.addEventListener('blur', function(){
+        // small delay to allow click handlers to run first
+        setTimeout(()=>{
+          try{
+            if(idUsuarioInput && idUsuarioInput.value) return;
+            const v = (this.value || '').trim();
+            if(!v){ if(idUsuarioInput) idUsuarioInput.value = ''; return; }
+            const child = results && Array.from(results.children).find(d => (d.textContent||'').trim() === v);
+            if(child){ idUsuarioInput.value = child.dataset.id || ''; results.style.display='none'; noresults.style.display='none'; }
+          }catch(_e){}
+        }, 180);
+      });
+
+      // ---------- Modal Usuario ----------
+      const modalUser = qs('#modal-user');
+      let editingUserId = null;
+
+      // Draft helpers: preserve form-new-user state across modal close/navigation
+      function saveUserDraft(){
+        try{
+          const form = qs('#form-new-user'); if(!form) return;
+          const draft = {
+            nombre: qs('#nu-nombre')?.value || '',
+            id_cargo: qs('#nu-cargo')?.value || '',
+            id_ciudad: qs('#nu-ciudad')?.value || '',
+            id_jefe: qs('#nu-jefe')?.value || '',
+            nu_regional: qs('#nu-regional')?.value || ''
+          };
+          sessionStorage.setItem('form_new_user_draft', JSON.stringify(draft));
+        }catch(_e){}
+      }
+
+      function restoreUserDraft(){
+        try{
+          const raw = sessionStorage.getItem('form_new_user_draft');
+          if(!raw) return false;
+          const d = JSON.parse(raw);
+          qs('#nu-nombre').value = d.nombre || '';
+          qs('#nu-cargo').value = d.id_cargo || '';
+          if(d.id_ciudad){ qs('#nu-ciudad').value = d.id_ciudad; }
+          if(d.id_jefe){ qs('#nu-jefe').value = d.id_jefe; }
+          if(d.nu_regional){ qs('#nu-regional').value = d.nu_regional; filterModalByRegional(d.nu_regional); }
+          return true;
+        }catch(_e){ return false; }
+      }
+
+      function clearUserDraft(){ try{ sessionStorage.removeItem('form_new_user_draft'); }catch(_e){} }
+
+      qs('#btn-new-user')?.addEventListener('click', () => {
+        editingUserId = null;
+        // mark modal mode and ensure ciudad is not editable when creating new
+        if(modalUser) { modalUser.dataset.mode = 'new'; }
+        // set title
+        try{ const t = qs('#modal-user-title'); if(t) t.textContent = 'Nuevo Usuario'; }catch(_e){}
+        const mainReg = qs('#sel-regional').value;
+        if(mainReg){ const nuReg = qs('#nu-regional'); if(nuReg){ nuReg.value = mainReg; filterModalByRegional(mainReg); } }
+        // restore draft if exists, otherwise clear fields
+        const restored = restoreUserDraft();
+        if(!restored){ qs('#nu-nombre').value = ''; qs('#nu-cargo').value = ''; qs('#nu-ciudad').value = ''; qs('#nu-jefe').value = ''; }
+        // ensure ciudad is enabled so user can select it after choosing regional
+        try{ const c = qs('#nu-ciudad'); if(c){ c.disabled = false; } }catch(_e){}
+        modalUser.style.display='flex'; modalUser.setAttribute('aria-hidden','false'); qs('#nu-nombre').focus();
+      });
+      qs('#btn-edit-user')?.addEventListener('click', async () => {
+        const uid = idUsuarioInput.value || null;
+        if(!uid){ showToast('Selecciona primero un usuario para editar', 'error'); return; }
+        editingUserId = parseInt(uid);
+        try{
+          const resp = await fetch('/api/usuarios/'+editingUserId);
+          if(!resp.ok){ const e = await resp.json().catch(()=>({})); showToast(e.error || 'No se pudo obtener usuario','error'); return; }
+          const u = await resp.json();
+          qs('#nu-nombre').value = u.nombre || '';
+          qs('#nu-cargo').value = u.id_cargo || '';
+          if(u.id_ciudad){
+            // Prefer the modal's ciudad option to infer regional (it's the authoritative list in the modal)
+            const modalCopt = qs('#nu-ciudad option[value="'+u.id_ciudad+'"]');
+            if(modalCopt && modalCopt.dataset && modalCopt.dataset.regional){
+              qs('#nu-regional').value = modalCopt.dataset.regional;
+              // filter modal cities first, then set the selected city
+              filterModalByRegional(modalCopt.dataset.regional);
+              qs('#nu-ciudad').value = u.id_ciudad || '';
+            } else {
+              // fallback to main select option or API-provided info
+              const copt = qs('#sel-ciudad option[value="'+u.id_ciudad+'"]');
+              if(copt && copt.dataset && copt.dataset.regional){
+                qs('#nu-regional').value = copt.dataset.regional;
+                filterModalByRegional(copt.dataset.regional);
+              }
+              qs('#nu-ciudad').value = u.id_ciudad || '';
+            }
+          } else {
+            // no ciudad set on user: just filter by current regional value
+            filterModalByRegional(qs('#nu-regional').value);
+            qs('#nu-ciudad').value = '';
+          }
+          qs('#nu-jefe').value = u.id_jefe || '';
+          // mark modal in edit mode, set title and allow editing ciudad
+          if(modalUser) { modalUser.dataset.mode = 'edit'; }
+          try{ const t = qs('#modal-user-title'); if(t) t.textContent = 'Editar Usuario'; }catch(_e){}
+          try{ const c = qs('#nu-ciudad'); if(c){ c.disabled = false; } }catch(_e){}
+          modalUser.style.display='flex'; modalUser.setAttribute('aria-hidden','false'); qs('#nu-nombre').focus();
+        }catch(err){ console.error('edit user fetch', err); showToast('Error cargando usuario', 'error'); }
+      });
+      qs('#nu-cancel')?.addEventListener('click', () => { saveUserDraft(); modalUser.style.display='none'; modalUser.setAttribute('aria-hidden','true'); });
+
+      // When modal regional changes, filter cities and adjust selection if necessary
+      qs('#nu-regional')?.addEventListener('change', function(){
+        try{
+          const reg = this.value || '';
+          filterModalByRegional(reg);
+          const ciudad = qs('#nu-ciudad');
+          if(!ciudad) return;
+          // enable ciudad selector and if current selected city does not belong to the regional, clear or auto-select if only one option available
+          const cur = ciudad.selectedOptions && ciudad.selectedOptions[0];
+          try{ ciudad.disabled = false; }catch(_e){}
+          if(cur && cur.dataset && cur.dataset.regional === reg) return;
+          const visible = Array.from(ciudad.options).filter(o => o.value && (o.style.display !== 'none'));
+          if(visible.length === 0){ ciudad.value = ''; try{ ciudad.disabled = true; }catch(_e){} }
+          else if(visible.length === 1){ ciudad.value = visible[0].value; }
+          else { ciudad.value = ''; }
+        }catch(_e){ console.error('sync nu-regional -> nu-ciudad', _e); }
+      });
+
+      qs('#form-new-user')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = qs('#nu-save'); btn.disabled = true;
+        const payload = {
+          nombre: qs('#nu-nombre').value.trim(),
+          id_cargo: parseInt(qs('#nu-cargo').value) || null,
+          id_ciudad: parseInt(qs('#nu-ciudad').value) || null,
+          id_jefe: parseInt(qs('#nu-jefe').value) || null
+        };
+        try{
+          let res, data;
+          if(editingUserId){
+            res = await fetch('/api/usuarios/'+editingUserId, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+            data = await res.json().catch(()=>({error:'Respuesta inválida'}));
+          } else {
+            res = await fetch('/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+            data = await res.json().catch(()=>({error:'Respuesta inválida'}));
+          }
+          if(res.status === 201 || res.status === 200){
+            qs('#id_usuario_input').value = data.id_usuario || editingUserId;
+            qs('#user-search').value = data.nombre || qs('#nu-nombre').value;
+
+            // Ajustar regional/ciudad/jefe del formulario principal si aplica
+            const mainRegSel = qs('#sel-regional');
+            const modalReg = qs('#nu-regional') && qs('#nu-regional').value;
+            const jefeId = data.id_jefe || parseInt(qs('#nu-jefe').value) || null;
+
+            if(mainRegSel && modalReg){
+              mainRegSel.value = modalReg;
+              await filterByRegional(modalReg, jefeId);
+            }
+
+            const ciudadId = data.id_ciudad || parseInt(qs('#nu-ciudad').value) || null;
+            if(ciudadId){
+              const selCiudad = qs('#sel-ciudad');
+              if(selCiudad){
+                let opt = selCiudad.querySelector('option[value="'+ciudadId+'"]');
+                if(!opt){
+                  opt = document.createElement('option');
+                  opt.value = ciudadId;
+                  const modalCiudadOpt = qs('#nu-ciudad')?.selectedOptions?.[0];
+                  opt.textContent = modalCiudadOpt ? modalCiudadOpt.textContent : (data.nombre_ciudad || '');
+                  opt.dataset.regional = modalReg || '';
+                  selCiudad.appendChild(opt);
+                }
+                selCiudad.value = ciudadId;
+              }
+            }
+
+            if(jefeId){
+              const selJefe = qs('#sel-jefe');
+              if(selJefe){
+                let optj = selJefe.querySelector('option[value="'+jefeId+'"]');
+                if(!optj){
+                  optj = document.createElement('option');
+                  optj.value = jefeId;
+                  const modalJefeOpt = qs('#nu-jefe')?.selectedOptions?.[0];
+                  optj.textContent = modalJefeOpt ? modalJefeOpt.textContent : (data.nombre_jefe || '');
+                  if(modalJefeOpt?.dataset?.regionals){ optj.dataset.regionals = modalJefeOpt.dataset.regionals; }
+                  selJefe.appendChild(optj);
+                }
+                selJefe.value = jefeId;
+              }
+            }
+
+            clearUserDraft(); modalUser.style.display='none'; modalUser.setAttribute('aria-hidden','true');
+            showToast(editingUserId ? 'Datos modificados exitosamente' : 'Usuario creado correctamente', 'success');
+            editingUserId = null;
+          } else {
+            const msg = data && data.error ? data.error : (editingUserId ? 'Error actualizando usuario' : 'Error creando usuario');
+            showToast(msg, 'error');
+          }
+        }catch(err){
+          console.error('create/update usuario', err);
+          showToast('Error creando/actualizando usuario (ver consola)', 'error');
+        }finally{ btn.disabled = false; }
+      });
+
+      // ---------- Modal Plan (estático) ----------
+      const modalPlan = qs('#modal-plan');
+      const npGigas = qs('#np-gigas');
+      const npIlimit = qs('#np-ilimitadas');
+      qs('#btn-new-plan')?.addEventListener('click', ()=>{ modalPlan.style.display='flex'; modalPlan.setAttribute('aria-hidden','false'); qs('#np-nombre').focus(); });
+      qs('#np-cancel')?.addEventListener('click', ()=>{ modalPlan.style.display='none'; modalPlan.setAttribute('aria-hidden','true'); });
+      npIlimit?.addEventListener('change', ()=>{ if(npIlimit.checked){ npGigas.value=''; npGigas.disabled = true; } else { npGigas.disabled = false; } });
+      function parseColCurrency(str){
+        if(str === null || str === undefined) return null;
+        let s = String(str).trim();
+        if(s === '') return null;
+        s = s.replace(/[^0-9.,-]/g, '');
+        const hasComma = s.indexOf(',') > -1;
+        const dotCount = (s.match(/\./g) || []).length;
+        if(hasComma){ s = s.replace(/\./g,'').replace(',', '.'); }
+        else if(dotCount > 1){ s = s.replace(/\./g,''); }
+        else if(dotCount === 1){
+          const parts = s.split('.');
+          if(parts[1] && parts[1].length === 3){ s = parts[0] + parts[1]; }
+        }
+        const n = Number(s);
+        return isFinite(n) ? n : null;
+      }
+      qs('#form-new-plan')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const gigasVal = (npIlimit && npIlimit.checked) ? null : (npGigas.value === '' ? null : Number(npGigas.value));
+        const precioVal = qs('#np-precio').value === '' ? null : parseColCurrency(qs('#np-precio').value);
+        const payload = { nombre_plan: qs('#np-nombre').value.trim(), gigas: gigasVal, precio_mensual: precioVal };
+        const res = await fetch('/api/planes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const p = await res.json().catch(()=> ({}));
+        if(res.status === 201){
+          const sel = qs('#sel-plan');
+          const opt = document.createElement('option');
+          opt.value = p.id_plan;
+          opt.textContent = p.nombre_plan + (p.gigas == null ? ' (Ilimitadas)' : ' - ' + p.gigas + ' GB') + (p.precio_mensual != null ? ' - $' + formatColCurrency(p.precio_mensual) : '');
+          sel.appendChild(opt);
+          sel.value = p.id_plan;
+          modalPlan.style.display='none'; modalPlan.setAttribute('aria-hidden','true');
+          showToast('Plan agregado exitosamente', 'success');
+        } else {
+          showToast(p.error || 'Error creando plan', 'error');
+        }
+      });
+
+      // ---------- Modal Ciudad (estático) ----------
+      const modalCiudad = qs('#modal-ciudad');
+      qs('#btn-new-ciudad')?.addEventListener('click', ()=>{
+        const mainReg = qs('#sel-regional').value;
+        if(mainReg) qs('#nc-ciudad-regional').value = mainReg;
+        modalCiudad.style.display='flex'; modalCiudad.setAttribute('aria-hidden','false'); qs('#nc-ciudad').focus();
+      });
+      qs('#nci-cancel')?.addEventListener('click', ()=>{ modalCiudad.style.display='none'; modalCiudad.setAttribute('aria-hidden','true'); });
+      qs('#form-new-ciudad')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const nombre = qs('#nc-ciudad').value.trim();
+        const id_reg = qs('#nc-ciudad-regional').value || null;
+        if(!nombre || !id_reg) return showToast('Nombre y regional requeridos', 'error');
+        try{
+          const resp = await fetch('/api/ciudades', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({nombre_ciudad: nombre, id_regional: id_reg}) });
+          const data = await resp.json().catch(()=>({}));
+          if(resp.status === 201){
+            const opt = document.createElement('option'); opt.value = data.id_ciudad; opt.textContent = data.nombre_ciudad; opt.dataset.regional = id_reg;
+            qs('#sel-ciudad').appendChild(opt);
+            qs('#nu-ciudad')?.appendChild(opt.cloneNode(true));
+            showToast('Ciudad creada', 'success');
+            modalCiudad.style.display='none'; modalCiudad.setAttribute('aria-hidden','true'); qs('#nc-ciudad').value='';
+          } else {
+            showToast(data.error || 'Error creando ciudad', 'error');
+          }
+        }catch(e){ showToast('Error creando ciudad', 'error'); }
+      });
+
+      // ---------- Modal Regional (nuevo) ----------
+      const modalRegional = qs('#modal-regional');
+      qs('#btn-new-regional')?.addEventListener('click', ()=>{
+        modalRegional.style.display = 'flex';
+        modalRegional.setAttribute('aria-hidden','false');
+        qs('#nr-nombre')?.focus();
+      });
+      qs('#nr-cancel')?.addEventListener('click', ()=>{ modalRegional.style.display='none'; modalRegional.setAttribute('aria-hidden','true'); });
+      qs('#form-new-regional')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const nombre = (qs('#nr-nombre').value || '').trim();
+        if(!nombre) return showToast('Nombre regional requerido','error');
+        try{
+          const resp = await fetch('/api/regionales', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nombre_regional: nombre }) });
+          const data = await resp.json().catch(()=>({}));
+          if(resp.status === 201){
+            // append to selects that list regionales
+            const ids = ['#sel-regional', '#nu-regional', '#nc-ciudad-regional', '#nj-regional'];
+            ids.forEach(selId => {
+              const s = qs(selId);
+              if(s){
+                const opt = document.createElement('option'); opt.value = data.id_regional; opt.textContent = data.nombre_regional;
+                // for ciudad modal's regional select we want it as normal option
+                s.appendChild(opt);
+              }
+            });
+            // select the new regional in main form and trigger filter
+            const mainSel = qs('#sel-regional'); if(mainSel){ mainSel.value = data.id_regional; filterByRegional(String(data.id_regional)); }
+            modalRegional.style.display='none'; modalRegional.setAttribute('aria-hidden','true'); qs('#nr-nombre').value = '';
+            showToast('Regional creada', 'success');
+          } else {
+            showToast(data.error || 'Error creando regional', 'error');
+          }
+        }catch(err){ console.error('create regional', err); showToast('Error creando regional', 'error'); }
+      });
+
+      // ---------- Modal Cargo (estático) ----------
+      const modalCargo = qs('#modal-cargo');
+      qs('#btn-new-cargo')?.addEventListener('click', ()=>{ modalCargo.style.display='flex'; modalCargo.setAttribute('aria-hidden','false'); qs('#nc-nombre').focus(); });
+      qs('#nc-cancel')?.addEventListener('click', ()=>{ modalCargo.style.display='none'; modalCargo.setAttribute('aria-hidden','true'); });
+      qs('#form-new-cargo')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const nombre = qs('#nc-nombre').value.trim();
+        if(!nombre) return showToast('Nombre requerido','error');
+        try{
+          const resp = await fetch('/api/cargos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({nombre_cargo: nombre}) });
+          const data = await resp.json().catch(()=>({}));
+          if(resp.status === 201){
+            // Agregar a todos los selects de cargo
+            qsa('select').forEach(s=>{
+              if(s.name && s.name.toLowerCase().includes('cargo')){
+                const opt = document.createElement('option'); opt.value = data.id_cargo; opt.textContent = data.nombre_cargo; s.appendChild(opt);
+              }
+            });
+            showToast('Cargo creado','success');
+            modalCargo.style.display='none'; modalCargo.setAttribute('aria-hidden','true');
+            qs('#nc-nombre').value='';
+          } else if(resp.status === 409){
+            // Seleccionar existente si retorna id
+            if(data && data.id_cargo){
+              const sel = qs('#nu-cargo'); let opt = sel.querySelector('option[value="'+data.id_cargo+'"]');
+              if(!opt){ opt = document.createElement('option'); opt.value = data.id_cargo; opt.textContent = data.nombre_cargo; sel.appendChild(opt); }
+              sel.value = data.id_cargo;
+              modalCargo.style.display='none'; modalCargo.setAttribute('aria-hidden','true');
+              showToast('Cargo ya existente, seleccionado', 'info');
+            } else {
+              showToast(data.error || 'Cargo ya existe', 'error');
+            }
+          } else {
+            showToast(data.error || 'Error creando cargo', 'error');
+          }
+        }catch(err){ console.error('create cargo', err); showToast('Error creando cargo', 'error'); }
+      });
+
+      // ---------- Modal Jefe (estático, MULTI) ----------
+      const modalJefe = document.getElementById('modal-jefe');
+
+      document.getElementById('btn-new-jefe')?.addEventListener('click', () => {
+        const mainReg = document.getElementById('sel-regional')?.value || '';
+        const sel = qs('#nj-regional', modalJefe);
+        if (sel && mainReg) {
+          Array.from(sel.options).forEach(o => { o.selected = (o.value === mainReg); });
+        }
+        modalJefe.style.display = 'flex';
+        modalJefe.setAttribute('aria-hidden','false');
+        qs('#nj-nombre', modalJefe)?.focus();
+        // mark modal as create mode
+        modalJefe.dataset.mode = 'create';
+        delete modalJefe.dataset.editId;
+      });
+
+      // Edit Jefe button: open modal in edit mode for selected jefe
+      const btnEditJefe = document.getElementById('btn-edit-jefe');
+      const selJefeMain = document.getElementById('sel-jefe');
+      function updateEditJefeState(){ if(btnEditJefe){ btnEditJefe.disabled = !(selJefeMain && selJefeMain.value); } }
+      if(selJefeMain){ selJefeMain.addEventListener('change', updateEditJefeState); updateEditJefeState(); }
+      btnEditJefe?.addEventListener('click', async () => {
+        const id = selJefeMain && selJefeMain.value; if(!id) return showToast('Selecciona primero un jefe', 'error');
+        try{
+          const resp = await fetch('/api/jefes/' + encodeURIComponent(id));
+          if(!resp.ok){ const e = await resp.json().catch(()=>({})); return showToast(e.error || 'No se pudo cargar jefe','error'); }
+          const j = await resp.json();
+          // populate modal fields
+          qs('#nj-nombre', modalJefe).value = j.nombre_jefe || '';
+          // set regional selections
+          const sel = qs('#nj-regional', modalJefe);
+          if(sel){ Array.from(sel.options).forEach(o => { o.selected = j.regional_ids && j.regional_ids.indexOf(Number(o.value)) !== -1; }); }
+          modalJefe.dataset.mode = 'edit'; modalJefe.dataset.editId = id;
+          modalJefe.style.display = 'flex'; modalJefe.setAttribute('aria-hidden','false'); qs('#nj-nombre', modalJefe)?.focus();
+        }catch(err){ console.error('load jefe', err); showToast('Error cargando jefe', 'error'); }
+      });
+
+      qs('#nj-cancel', modalJefe)?.addEventListener('click', () => {
+        modalJefe.style.display='none';
+        modalJefe.setAttribute('aria-hidden','true');
+      });
+
+      qs('#form-new-jefe', modalJefe)?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = (qs('#nj-nombre', modalJefe)?.value || '').trim();
+        const regs = Array.from(qs('#nj-regional', modalJefe)?.selectedOptions || [])
+                      .map(o => parseInt(o.value, 10))
+                      .filter(Number.isFinite);
+        if (!nombre || regs.length === 0) {
+          return (window.safeToast || showToast)('Nombre y al menos una regional son requeridos', 'error');
+        }
+        // Payload multi-regional (tu backend lo soporta)
+        let payload = { nombre_jefe: nombre, regional_ids: regs };
+
+        try{
+          let res, data;
+          if(modalJefe.dataset.mode === 'edit' && modalJefe.dataset.editId){
+            // update existing jefe
+            const eid = modalJefe.dataset.editId;
+            res = await fetch('/api/jefes/' + encodeURIComponent(eid), { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            data = await res.json().catch(()=> ({}));
+            if(res.status === 200){
+              // update existing option texts/datasets
+              const selJefe = document.getElementById('sel-jefe');
+              if(selJefe){ const opt = selJefe.querySelector('option[value="'+eid+'"]'); if(opt){ opt.textContent = data.nombre_jefe || nombre; opt.dataset.regionals = (data.regional_ids||regs).join(','); } }
+              const nuSel = qs('#nu-jefe'); if(nuSel){ const opt2 = nuSel.querySelector('option[value="'+eid+'"]'); if(opt2){ opt2.textContent = data.nombre_jefe || nombre; opt2.dataset.regionals = (data.regional_ids||regs).join(','); } }
+              modalJefe.style.display='none'; modalJefe.setAttribute('aria-hidden','true'); (window.safeToast || showToast)('Jefe actualizado', 'success');
+            } else {
+              (window.safeToast || showToast)(data.error || 'Error actualizando jefe', 'error');
+            }
+            return;
+          } else {
+            // create new
+            res = await fetch('/api/jefes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            data = await res.json().catch(()=> ({}));
+          }
+          if(res.status === 201){
+            // Agregar al select principal
+            const selJefe = document.getElementById('sel-jefe');
+            if (selJefe) {
+              const opt = document.createElement('option');
+              opt.value = data.id_jefe;
+              opt.textContent = data.nombre_jefe;
+              opt.dataset.regionals = (data.regional_ids || regs).join(',');
+              selJefe.appendChild(opt);
+              selJefe.value = data.id_jefe;
+            }
+            // Agregar al select del modal de usuario
+            const nuSel = qs('#nu-jefe');
+            if(nuSel){
+              const opt2 = document.createElement('option');
+              opt2.value = data.id_jefe;
+              opt2.textContent = data.nombre_jefe;
+              opt2.dataset.regionals = (data.regional_ids || regs).join(',');
+              nuSel.appendChild(opt2);
+            }
+
+            modalJefe.style.display='none';
+            modalJefe.setAttribute('aria-hidden','true');
+            (window.safeToast || showToast)('Jefe agregado exitosamente', 'success');
+          } else {
+            (window.safeToast || showToast)(data.error || 'Error creando jefe', 'error');
+          }
+        }catch(err){
+          console.error('create jefe', err);
+          (window.safeToast || showToast)('Error creando jefe (ver consola)', 'error');
+        }
+      });
+
+      // ---------- Verificar número de línea ----------
+      const btnCheck = qs('#btn-check-numero');
+      const numeroInput = qs('#numero_linea');
+      const resultDiv = qs('#numero-check-result');
+      if(btnCheck && numeroInput){
+        btnCheck.addEventListener('click', async function(){
+          const num = numeroInput.value && String(numeroInput.value).trim();
+          if(!num){ showToast('Ingresa un número para verificar', 'error'); return; }
+          btnCheck.disabled = true;
+          resultDiv.textContent = 'Verificando...';
+          try{
+            const resp = await fetch('/api/lineas/check_numero?numero=' + encodeURIComponent(num));
+            if(resp.ok){
+              const j = await resp.json();
+              if(j.exists){
+                resultDiv.style.color = '#b00020'; resultDiv.textContent = 'Número ya registrado (id: ' + j.id_linea + ')';
+                showToast('El número ya existe', 'error', 2500);
+              } else {
+                resultDiv.style.color = '#0a7a07'; resultDiv.textContent = 'Número disponible';
+                showToast('Número disponible', 'success', 2000);
+              }
+            } else {
+              const e = await resp.json().catch(()=>({}));
+              resultDiv.style.color = '#b00020'; resultDiv.textContent = e.error || 'Error verificando';
+            }
+          }catch(err){
+            console.error('check numero', err);
+            resultDiv.style.color = '#b00020'; resultDiv.textContent = 'Error de conexión';
+          } finally {
+            btnCheck.disabled = false;
+            setTimeout(()=>{ resultDiv.textContent = ''; }, 3500);
+          }
+        });
+      }
+
+      // ---------- Guardar línea ----------
+      qs('#form-linea').addEventListener('submit', async function(e){
+        e.preventDefault();
+        const btn = this.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+        const form = new FormData(this);
+        const obj = Object.fromEntries(form.entries());
+        ['id_usuario','id_plan','id_tipo_sim','id_estado','id_ciudad','id_jefe'].forEach(k=>{ if(obj[k]) obj[k]=parseInt(obj[k]); else obj[k]=null });
+        // Do not send id_regional: regional for a linea is derived from id_ciudad on the server
+        if(obj.hasOwnProperty('id_regional')) delete obj.id_regional;
+        try{
+          const resp = await fetch('/api/lineas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(obj)});
+          const data = await resp.json().catch(()=>({error:'Respuesta inválida'}));
+          if(resp.status === 201){
+            showToast('Línea creada correctamente', 'success', 1500);
+            setTimeout(()=> window.location = '/lineas', 900);
+          } else {
+            showToast(data && data.error ? data.error : 'Error creando línea', 'error');
+            if(btn) btn.disabled = false;
+          }
+        } catch(err) {
+          console.error('create linea', err);
+          showToast('Error creando línea (ver consola)', 'error');
+          if(btn) btn.disabled = false;
+        }
+      });
+
+      // ---------- Volver ----------
+      const backBtn = qs('#btn-back');
+      if(backBtn){ backBtn.addEventListener('click', ()=>{ try{ if(window.history && history.length>1){ history.back(); } else { window.location = '/lineas'; } }catch(e){ window.location = '/lineas'; } }); }
+
+      // When main city changes, auto-select its regional
+      qs('#sel-ciudad')?.addEventListener('change', function(){
+        try{
+          const opt = this.selectedOptions && this.selectedOptions[0];
+          if(opt && opt.dataset && opt.dataset.regional){ const reg = opt.dataset.regional; const selRegional = qs('#sel-regional'); if(selRegional){ selRegional.value = reg; filterByRegional(reg); } }
+        }catch(_e){}
+      });
+
+      // Ensure modal's ciudad syncs its regional too (nu-ciudad -> nu-regional)
+      qs('#nu-ciudad')?.addEventListener('change', function(){
+        try{
+          const opt = this.selectedOptions && this.selectedOptions[0];
+          if(opt && opt.dataset && opt.dataset.regional){ const reg = opt.dataset.regional; const nuReg = qs('#nu-regional'); if(nuReg){ nuReg.value = reg; filterModalByRegional(reg); } }
+        }catch(_e){ console.error('sync nu-ciudad -> nu-regional', _e); }
+      });
+
+      // Cerrar modales con ESC o click fuera — guardar draft del modal-user si aplica
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ document.querySelectorAll('.modal').forEach(m=>{ try{ if(m.id === 'modal-user') saveUserDraft(); }catch(_e){} try{ closeModal(m); }catch(_e){} }); } });
+      document.addEventListener('click', (e)=>{ if(e.target.classList && e.target.classList.contains('modal')){ try{ if(e.target.id === 'modal-user') saveUserDraft(); }catch(_e){} try{ closeModal(e.target); }catch(_e){} } });
+    });
+  </script>
+</body>
+</html>

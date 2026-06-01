@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Ingreso - Gestión de Líneas</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#0f172a}
+    body{display:grid;place-items:center;background:#f3f6f7}
+    .card{width:720px;max-width:92%;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(2,6,23,0.12);overflow:hidden}
+    .card .hero{background:url('/static/img/office-bg.jpg') center/cover no-repeat;height:160px;display:flex;align-items:center;justify-content:center}
+    .card .body{padding:28px}
+    h1{margin:0 0 8px;font-size:22px;color:#0f5132}
+    p{margin:0 0 16px;color:#6b7280}
+    label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
+    input{width:100%;padding:12px;border-radius:8px;border:1px solid #e6eef0;margin-bottom:12px}
+    .btn{display:inline-block;padding:10px 16px;background:#198754;color:#fff;border-radius:8px;border:none;font-weight:700;cursor:pointer}
+    .small{font-size:13px;color:#6b7280}
+    .logo-box{background:#fff;padding:22px;border-radius:10px;box-shadow:0 10px 30px rgba(2,6,23,0.06);display:flex;align-items:center;justify-content:center;margin-top:-40px;margin-left:auto;margin-right:auto;width:320px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hero"></div>
+    <div class="body">
+      <div class="logo-box"><img src="{{ url_for('static', filename='img/logomega.png') }}" alt="Megalabs" style="height:44px"></div>
+      <div style="max-width:580px;margin:18px auto 0;text-align:center">
+        <h1>Bienvenido a la Gestión de Líneas</h1>
+        <p class="small">Ingresa con tu usuario administrador para continuar.</p>
+      </div>
+
+      <form method="post" action="{{ url_for('login') }}" style="max-width:520px;margin:18px auto 0">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div style="margin-bottom:12px;color:#b00020">
+              {% for cat,msg in messages %}{{ msg }}{% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <label>Usuario</label>
+        <input name="username" autocomplete="username" required>
+        <label>Contraseña</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="login_password" name="password" type="password" autocomplete="current-password" required style="flex:1">
+          <button id="login_toggle_pwd" type="button" class="small" style="background:transparent;border:none;cursor:pointer;color:#198754;font-weight:700" onclick="togglePassword('login_password','login_toggle_pwd')">Mostrar</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <div style="display:flex;gap:12px;align-items:center">
+            <a href="{{ url_for('forgot_password') }}" class="small">Olvidé mi contraseña</a>
+            <a href="{{ url_for('create_admin') }}" class="small">Crear cuenta</a>
+          </div>
+          <div style="text-align:right"><button class="btn" type="submit">INGRESAR</button></div>
+        </div>
+      </form>
+    </div>
+  </div>
+    <script>
+      function togglePassword(fieldId, btnId){
+        var inp = document.getElementById(fieldId);
+        var btn = document.getElementById(btnId);
+        if(!inp) return;
+        if(inp.type === 'password'){
+          inp.type = 'text';
+          if(btn) btn.textContent = 'Ocultar';
+        } else {
+          inp.type = 'password';
+          if(btn) btn.textContent = 'Mostrar';
+        }
+      }
+    </script>
+</body>
+</html>

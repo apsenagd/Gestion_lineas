@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Inicio · Gestión de Líneas{% endblock %}
+
+{% block content %}
+<section class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:32px;">
+  <img src="{{ url_for('static', filename='img/logomega.png') }}" alt="Logo Megalabs" style="width:120px;height:auto;margin-bottom:16px;">
+  <h1 style="font-size:2.2rem;font-weight:800;color:#1f4d40;margin-bottom:8px;">Bienvenido a la Gestión de Líneas</h1>
+  <p style="font-size:1.1rem;color:#374151;text-align:center;max-width:480px;">Administra, consulta y controla tus líneas móviles de manera fácil y eficiente.<br>Utiliza el menú lateral para navegar por las funciones principales.</p>
+  <a href="{{ url_for('home_listado_lineas') }}" class="btn-primary" style="font-size:1.1rem;padding:16px 32px;">Ir al Listado de Líneas</a>
+</section>
+{% endblock %}

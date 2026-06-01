@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Detalle de Línea · Gestión{% endblock %}
+
+{% block content %}
+<style>
+  .searchbar { display: none; }
+  .main { gap: 10px; }
+
+  /* Estado badge */
+  .badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.02) inset;
+  }
+  .badge--activo { background: #ecfdf5; color: #065f46; }
+  .badge--en-liberacion { background: #fffbeb; color: #92400e; }
+  .badge--liberada { background: #eff6ff; color: #1e3a8a; }
+  .badge--dada-baja { background: #fde2e1; color: #842029; }
+  .badge--default { background: #ffffff; color: #111827; border: 1px solid #e5e7eb; }
+</style>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" style="margin-bottom: 16px; padding: 12px 16px; border-radius: 6px; background-color: #d1fae5; color: #065f46; border-left: 4px solid #10b981; font-size: 14px; animation: fadeOut 3s 2s forwards;">
+        {{ message }}
+      </div>
+      <style>
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      </style>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<section class="card">
+  <div class="card-header">
+    <div class="tabs">
+      <div class="tab active">Detalle de Línea</div>
+    </div>
+    <a href="{{ url_for('home_listado_lineas') }}" class="btn-primary">
+      <i class="fa fa-arrow-left"></i> Volver
+    </a>
+  </div>
+
+  <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;">
+    <!-- Información -->
+    <div class="card">
+      <h3>Información</h3>
+      <p><strong>ID:</strong> {{ linea.id }}</p>
+      <p><strong>Número:</strong> {{ linea.numero }}</p>
+      <p><strong>Usuario:</strong> {{ linea.usuario or '—' }} <span style="color: #9ca3af;">({{ linea.cargo or '—' }})</span></p>
+      <p><strong>Jefe inmediato:</strong> {{ linea.jefe_usuario or linea.jefe_inmediato or '—' }}</p>
+      <p><strong>Regional del Usuario:</strong> {{ linea.regional_usuario or '—' }}</p>
+      <p><strong>Ciudad:</strong> {{ linea.ciudad or '—' }}</p>
+      <p><strong>Tipo SIM:</strong> {{ linea.tipo_sim or '—' }}</p>
+      <p><strong>Estado:</strong>
+        {% set est = linea.estado or '—' %}
+        {% if est == '—' %}
+          —
+        {% else %}
+          {% set l = est.lower() %}
+          {% if 'activo' in l %}
+            {% set klass = 'badge badge--activo' %}
+          {% elif 'en liber' in l or 'en liberaci' in l %}
+            {% set klass = 'badge badge--en-liberacion' %}
+          {% elif 'liberad' in l %}
+            {% set klass = 'badge badge--liberada' %}
+          {% elif 'dada' in l and 'baja' in l %}
+            {% set klass = 'badge badge--dada-baja' %}
+          {% else %}
+            {% set klass = 'badge badge--default' %}
+          {% endif %}
+          <span class="{{ klass }}">{{ est }}</span>
+        {% endif %}
+      </p>
+      <p><strong>Observación:</strong> {{ linea.observacion or '—' }}</p>
+    </div>
+
+    <!-- Plan -->
+    <div class="card">
+      <h3>Plan</h3>
+      <p style="margin-bottom: 18px;"><strong>Actual:</strong> {{ linea.plan or '—' }}<br><span style="color: #9ca3af; font-size: 13px;">{{ linea.gigas_plan or '—' }} GB • ${{ "{:,.0f}".format(linea.precio_plan) if linea.precio_plan else '—' }}</span></p>
+
+      <form method="post" action="{{ url_for('cambiar_plan', linea_id=linea.id) }}">
+        <div class="form-group">
+          <label for="id_plan">Cambiar plan</label>
+          <select id="id_plan" name="id_plan" required>
+            <option value="">-- Selecciona plan --</option>
+            {% for p in planes %}
+              <option value="{{ p.id_plan }}" {% if p.id_plan == linea.id_plan %}selected{% endif %}>{{ p.nombre_plan }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn-primary" type="submit"><i class="fa fa-rotate"></i> Cambiar plan</button>
+      </form>
+    </div>
+
+    <!-- Asignación -->
+    <div class="card">
+      <h3>Asignación</h3>
+      <p style="margin-bottom: 18px; color: #6b7280; font-size: 13px;">Asigna la línea a un usuario </p>
+      
+      <form method="post" action="{{ url_for('asignar_linea', linea_id=linea.id) }}">
+        <div class="form-group">
+          <label for="id_usuario">Usuario</label>
+          <select id="id_usuario" name="id_usuario" required>
+            <option value="">-- Selecciona usuario --</option>
+            {% for u in usuarios %}
+              <option value="{{ u.id_usuario }}" {% if u.id_usuario == linea.id_usuario %}selected{% endif %}>{{ u.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        
+        <div class="action-buttons">
+          <button class="btn-primary" type="submit"><i class="fa fa-user-check"></i> Asignar</button>
+        </div>
+      </form>
+
+      <div style="display:inline-block; margin-top:8px;">
+        <form method="post" action="{{ url_for('devolver_linea', linea_id=linea.id) }}" style="display:inline;">
+          <button class="btn-danger" type="submit"><i class="fa fa-undo"></i> Devolver</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edición básica -->
+    <div class="card">
+      <h3>Edición básica</h3>
+      <p style="margin-bottom: 18px; color: #6b7280; font-size: 13px;">Modifica campos básicos de la línea</p>
+      
+      <form method="post" action="{{ url_for('editar_basico', linea_id=linea.id) }}">
+        <div class="form-group">
+          <label for="id_tipo_sim">Tipo SIM</label>
+          <select id="id_tipo_sim" name="id_tipo_sim">
+            <option value="">(mantener)</option>
+            {% for t in tipos %}
+              <option value="{{ t.id_tipo_sim }}" {% if t.id_tipo_sim == linea.id_tipo_sim %}selected{% endif %}>{{ t.nombre_tipo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="id_estado">Estado</label>
+          <select id="id_estado" name="id_estado">
+            <option value="">(mantener)</option>
+            {% for e in estados %}
+              <option value="{{ e.id_estado }}" {% if e.id_estado == linea.id_estado %}selected{% endif %}>{{ e.nombre_estado }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="observacion">Observación</label>
+          <textarea id="observacion" name="observacion">{{ linea.observacion or '' }}</textarea>
+        </div>
+
+        <button class="btn-primary" type="submit"><i class="fa fa-save"></i> Guardar cambios</button>
+      </form>
+    </div>
+
+    <!-- Historial -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>Historial de novedades</h3>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <label for="novedad-filter" style="font-weight:600; color:#374151;">Filtrar por:</label>
+        <select id="novedad-filter" style="padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb;">
+          <option value="ALL">Todas</option>
+          <option value="EDICION">Edición</option>
+          <option value="DEVOLUCION">Devolución</option>
+          <option value="ASIGNACION">Asignación</option>
+          <option value="PLAN">Plan</option>
+          <option value="CREACION">Creación</option>
+        </select>
+        <input id="novedad-search" placeholder="Buscar texto..." style="padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; flex:1;" />
+        <button id="novedad-clear" class="btn-ghost" style="margin-left:6px;">Limpiar</button>
+      </div>
+      
+      {% if novedades %}
+        <div class="novedades-list">
+          {% for n in novedades %}
+            {% set tipo_clase = 'novedad-' + n.tipo|lower %}
+            {% set iconos = {
+              'PLAN': '🔄',
+              'ASIGNACION': '👤',
+              'DEVOLUCION': '↩️',
+              'EDICION': '✏️',
+              'CREACION': '✨'
+            } %}
+            <div class="novedad-item {{ tipo_clase }}" data-tipo="{{ n.tipo }}">
+              <div class="novedad-icon">{{ iconos.get(n.tipo, '•') }}</div>
+              <div class="novedad-content">
+                <h4>{{ n.tipo|replace('_', ' ') }}</h4>
+                <p><strong>{{ n.detalle or '—' }}</strong></p>
+                {% if n.valor_anterior or n.valor_nuevo %}
+                  <div class="novedad-values">
+                    <span>{{ n.valor_anterior or '—' }}</span>
+                    <span style="background: transparent; color: #d1d5db; padding: 0;">→</span>
+                    <span>{{ n.valor_nuevo or '—' }}</span>
+                  </div>
+                {% endif %}
+                <div class="novedad-footer">
+                  <span><i class="fa fa-clock"></i> {{ n.fecha }}</span>
+                  <span><i class="fa fa-user"></i> {{ n.usuario_actor or 'Sistema' }}</span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: #9ca3af; text-align: center; padding: 24px; font-style: italic;">Sin novedades registradas</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const sel = document.getElementById('novedad-filter');
+    const search = document.getElementById('novedad-search');
+    const clearBtn = document.getElementById('novedad-clear');
+    const list = document.querySelectorAll('.novedad-item');
+
+    function applyFilter(){
+      const tipo = sel ? sel.value : 'ALL';
+      const q = search ? (search.value || '').toLowerCase().trim() : '';
+      list.forEach(function(el){
+        const t = (el.getAttribute('data-tipo')||'').toUpperCase();
+        const text = (el.textContent||'').toLowerCase();
+        let okTipo = (tipo === 'ALL') || (t === tipo);
+        let okText = !q || text.indexOf(q) !== -1;
+        el.style.display = (okTipo && okText) ? '' : 'none';
+      });
+    }
+
+    if(sel) sel.addEventListener('change', applyFilter);
+    if(search) search.addEventListener('input', function(){ setTimeout(applyFilter, 150); });
+    if(clearBtn) clearBtn.addEventListener('click', function(e){ e.preventDefault(); if(search) search.value=''; if(sel) sel.value='ALL'; applyFilter(); });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Listado de Líneas · Gestión{% endblock %}
+
+{% block content %}
+  <section class="card">
+
+    <!-- Tabs superiores  -->
+    <div class="card-header">
+      <div class="tabs">
+        <div class="tab active">Listado de Líneas</div>
+        <a href="{{ url_for('reportes_index') }}" class="tab">Reportes</a>
+      </div>
+
+      <!-- Botón de exportar Excel y Nueva Línea -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="{{ url_for('export_lineas_xlsx') }}" class="btn-secondary" id="export-main" title="Exportar a Excel">
+          <i class="fa fa-file-excel"></i>
+        </a>
+        <a href="{{ url_for('crear_linea') }}" class="btn-primary">
+          <i class="fa fa-plus"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Barra de búsqueda unificada y filtros -->
+    <form class="filters-bar" id="filters-form" method="get" autocomplete="off">
+      <!-- Búsqueda unificada q -->
+      <div class="filter-group" style="flex: 1; min-width: 250px;">
+        <label>Buscar</label>
+        <input type="text" id="search-q" name="q" value="{{ q or '' }}" placeholder="Número, usuario, cargo, ciudad, plan, regional..." autocomplete="off">
+      </div>
+
+      <!-- Plan -->
+      <div class="filter-group">
+        <label>Plan</label>
+        <select id="select-plan" name="plan" onchange="this.form.submit()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <!-- Tipo SIM -->
+      <div class="filter-group">
+        <label>Tipo SIM</label>
+        <select id="select-tipo" name="tipo_sim" onchange="this.form.submit()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <!-- Estado -->
+      <div class="filter-group">
+        <label>Estado</label>
+        <select id="select-estado" name="estado" onchange="this.form.submit()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <button class="filter-reset" type="button" onclick="window.location='{{ url_for('home_listado_lineas') }}'"><i class="fa fa-times"></i> Limpiar</button>
+    </form>
+
+    <!-- Chips de filtros activos -->
+    {% if q or plan_f or tipo_sim_f or estado_f %}
+    <div class="active-filters" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+      {% if q %}
+        <span class="filter-chip"><i class="fa fa-search"></i> "{{ q }}"</span>
+      {% endif %}
+      {% if plan_f %}
+        <span class="filter-chip"><i class="fa fa-database"></i> {{ plan_f }}</span>
+      {% endif %}
+      {% if tipo_sim_f %}
+        <span class="filter-chip"><i class="fa fa-mobile"></i> {{ tipo_sim_f }}</span>
+      {% endif %}
+      {% if estado_f %}
+        <span class="filter-chip"><i class="fa fa-info-circle"></i> {{ estado_f }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if warning %}
+      <div class="warning" style="margin-top:12px;color:#92400e;background:#fff7ed;padding:10px;border-radius:6px;">{{ warning }}</div>
+    {% endif %}
+
+
+    <!-- Tabla -->
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Línea</th>
+          <th>Usuario</th>
+          <th>Cargo</th>
+          <th>Ciudad</th>
+          <th>Plan</th>
+          <th>Tipo SIM</th>
+          <th>Estado</th>
+          <th>Observación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+        
+<tbody id="lines-body">
+</tbody>
+
+    </table>
+
+  
+
+    <!-- Pie de tabla -->
+    <div class="pager-wrap" style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:14px; flex-wrap:wrap;">
+      <!-- Texto: Mostrando X a Y de N -->
+      <div class="muted" style="color:#6b7280; font-size:14px;">
+        Mostrando <strong>{{ pagination.start_item }}</strong> a <strong>{{ pagination.end_item }}</strong>
+        de <strong>{{ pagination.total_items }}</strong> activos
+      </div>
+
+      <!-- Controles de página -->
+      <div class="pager" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+
+        {# Anterior #}
+        {% set prev = pagination.page - 1 %}
+        {% if pagination.page > 1 %}
+          <a class="page-btn" href="?page={{ prev }}&per_page={{ pagination.per_page }}{% if pagination.q %}&q={{ pagination.q }}{% endif %}{% if pagination.estado %}&estado={{ pagination.estado }}{% endif %}">«</a>
+        {% else %}
+          <span class="page-btn disabled">«</span>
+        {% endif %}
+
+        {# Ventana de páginas #}
+        {% set window = 2 %}
+        {% set start = [1, pagination.page - window]|max %}
+        {% set end = [pagination.total_pages, pagination.page + window]|min %}
+
+        {% if start > 1 %}
+          <a class="page-btn" href="?page=1&per_page={{ pagination.per_page }}{% if pagination.q %}&q={{ pagination.q }}{% endif %}{% if pagination.estado %}&estado={{ pagination.estado }}{% endif %}">1</a>
+          <span class="dots">…</span>
+        {% endif %}
+
+        {% for p in range(start, end + 1) %}
+          {% if p == pagination.page %}
+            <span class="page-btn active">{{ p }}</span>
+          {% else %}
+            <a class="page-btn" href="?page={{ p }}&per_page={{ pagination.per_page }}{% if pagination.q %}&q={{ pagination.q }}{% endif %}{% if pagination.estado %}&estado={{ pagination.estado }}{% endif %}">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+
+        {% if end < pagination.total_pages %}
+          <span class="dots">…</span>
+          <a class="page-btn" href="?page={{ pagination.total_pages }}&per_page={{ pagination.per_page }}{% if pagination.q %}&q={{ pagination.q }}{% endif %}{% if pagination.estado %}&estado={{ pagination.estado }}{% endif %}">{{ pagination.total_pages }}</a>
+        {% endif %}
+
+        {# Siguiente #}
+        {% set next = pagination.page + 1 %}
+        {% if pagination.page < pagination.total_pages %}
+          <a class="page-btn" href="?page={{ next }}&per_page={{ pagination.per_page }}{% if pagination.q %}&q={{ pagination.q }}{% endif %}{% if pagination.estado %}&estado={{ pagination.estado }}{% endif %}">»</a>
+        {% else %}
+          <span class="page-btn disabled">»</span>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!--  FIN BLOQUE PAGINACIÓN  -->
+
+  </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // debug banner removed
+  // Debounce 500ms para búsqueda unificada q
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('filters-form');
+    const searchInput = document.getElementById('search-q');
+    
+    if (searchInput && form) {
+      let debounceTimeout = null;
+      searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+          form.submit();
+        }, 500);
+      });
+    }
+  });
+
+  // Cargar filas por AJAX 
+  document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.getElementById('lines-body');
+    if (!tbody) return;
+
+    const paramsBase = new URLSearchParams(window.location.search);
+    const page = paramsBase.get('page') || 1;
+    const per_page = paramsBase.get('per_page') || 10;
+
+    function renderRows(data) {
+      if (!data || !Array.isArray(data.items)) return;
+      if (data.warning) {
+        const warn = document.createElement('div');
+        warn.className = 'warning';
+        warn.style = 'margin-top:12px;color:#92400e;background:#fff7ed;padding:10px;border-radius:6px;';
+        warn.textContent = data.warning;
+        tbody.parentNode.insertBefore(warn, tbody);
+      }
+      tbody.innerHTML = '';
+      //estados
+      function normalize(s){ if(!s) return ''; try{ return s.toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').trim(); }catch(e){ return s.toString().toLowerCase().trim(); } }
+      function stateClass(name){
+        const n = normalize(name);
+        if(!n) return '';
+        if(n.startsWith('act') || n === 'activo' || n === 'activa') return 'badge-success';
+        if(n.includes('dada') && n.includes('baja')) return 'badge--dada-baja';
+        if(n.startsWith('inact') || n === 'inactivo' || n === 'inactiva') return 'badge-danger';
+        if(n.includes('en ces') || n === 'en cesion' || n === 'en cesion') return 'badge-cesion';
+        if(n.includes('cesion') || n === 'cesionada') return 'badge-cesionada';
+        if(n.includes('liberaci') || n.includes('en libera')) return 'badge-liberacion';
+        if(n.includes('transfer')) return 'badge-transferida';
+        return '';
+      }
+
+      data.items.forEach(l => {
+        const tr = document.createElement('tr');
+        const cls = stateClass(l.estado);
+        const estadoHtml = `<span class="badge ${cls}">${l.estado ?? '—'}</span>`;
+        tr.innerHTML = `
+          <td>${l.id ?? ''}</td>
+          <td style="font-weight:700">${l.numero ?? ''}</td>
+          <td>${l.usuario ?? '—'}</td>
+          <td>${l.cargo ?? '—'}</td>
+          <td>${l.ciudad ?? '—'}</td>
+          <td>${l.plan ?? '—'}</td>
+          <td>${l.tipo_sim ?? '—'}</td>
+          <td>${estadoHtml}</td>
+          <td style="max-width:320px">${l.observacion ?? '—'}</td>
+          <td><a href="/lineas/${l.id}" class="btn-info" style="display:inline-flex;padding:6px 12px;font-size:12px;"><i class="fa fa-eye"></i> Ver</a></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // actualizar paginación y texto
+      try {
+        const muted = document.querySelector('.muted');
+        const pageNum = parseInt(page, 10);
+        const perPageNum = parseInt(per_page, 10);
+        const total = parseInt(data.total || 0, 10);
+        const start_item = total > 0 ? (pageNum - 1) * perPageNum + 1 : 0;
+        const end_item = Math.min((pageNum - 1) * perPageNum + data.items.length, total);
+        if (muted) muted.innerHTML = `Mostrando <strong>${start_item}</strong> a <strong>${end_item}</strong> de <strong>${total}</strong> activos`;
+        const pager = document.querySelector('.pager');
+        if (pager) {
+          const total_pages = Math.max(Math.ceil(total / perPageNum), 1);
+          const windowSize = 2;
+          const start = Math.max(1, pageNum - windowSize);
+          const end = Math.min(total_pages, pageNum + windowSize);
+          const urlParams = new URLSearchParams(window.location.search);
+          function makeLink(p) { urlParams.set('page', p); urlParams.set('per_page', per_page); return '?' + urlParams.toString(); }
+          let html = '';
+          if (pageNum > 1) html += `<a class="page-btn" href="${makeLink(pageNum-1)}">«</a>`; else html += `<span class="page-btn disabled">«</span>`;
+          if (start > 1) { html += `<a class="page-btn" href="${makeLink(1)}">1</a><span class="dots">…</span>`; }
+          for (let p = start; p <= end; p++) { html += (p===pageNum) ? `<span class="page-btn active">${p}</span>` : `<a class="page-btn" href="${makeLink(p)}">${p}</a>`; }
+          if (end < total_pages) html += `<span class="dots">…</span><a class="page-btn" href="${makeLink(total_pages)}">${total_pages}</a>`;
+          html += (pageNum < total_pages) ? `<a class="page-btn" href="${makeLink(pageNum+1)}">»</a>` : `<span class="page-btn disabled">»</span>`;
+          pager.innerHTML = html;
+        }
+      } catch (e) {}
+    }
+
+    async function loadLines(attempt=1) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', page);
+      params.set('per_page', per_page);
+      const controller = new AbortController();
+      const timeoutMs = 12000; // 12s
+      const t = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(`/api/lineas?${params.toString()}`, { signal: controller.signal });
+        clearTimeout(t);
+        if (!res.ok) throw new Error('API error ' + res.status);
+        const data = await res.json();
+        renderRows(data);
+      } catch (err) {
+        if (attempt < 3) {
+          // pequeño retraso exponencial y reintento
+          setTimeout(() => loadLines(attempt + 1), 500 * attempt);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="10">Error cargando datos: ' + (err.message || 'Error') + '</td></tr>';
+        }
+      }
+    }
+
+    // Cargar catálogos primero, luego las líneas (reduce concurrencia DB)
+    const selPlan = document.getElementById('select-plan');
+    const selTipo = document.getElementById('select-tipo');
+    const selEstado = document.getElementById('select-estado');
+    function fillSelect(url, selectEl, selectedValue){
+      if(!selectEl) return Promise.resolve();
+      return fetch(url).then(r=>r.ok? r.json(): Promise.reject()).then(data=>{
+        data.forEach(v=>{ 
+          const opt=document.createElement('option');
+          let val = v; let txt = v;
+          if(v && typeof v === 'object'){
+            val = v.id || v.id_estado || v.id_plan || v.id_tipo_sim || v.id;
+            txt = v.nombre || v.nombre_estado || v.nombre_plan || v.nombre_tipo || String(v);
+          }
+          opt.value = val;
+          opt.textContent = txt;
+          if(selectedValue && String(selectedValue) === String(val)) opt.selected=true;
+          selectEl.appendChild(opt); 
+        });
+      }).catch(()=>{});
+    }
+
+    const paramsQuery = new URLSearchParams(window.location.search);
+    Promise.all([
+      fillSelect('/api/catalogos/planes', selPlan, paramsQuery.get('plan')),
+      fillSelect('/api/catalogos/tipos_sim', selTipo, paramsQuery.get('tipo_sim')),
+      fillSelect('/api/catalogos/estados', selEstado, paramsQuery.get('estado'))
+    ]).finally(()=>{ loadLines(); });
+  });
+
+  
+</script>
+{% endblock %}

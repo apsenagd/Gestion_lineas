@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestión de Líneas</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:24px}
+    h1{margin-bottom:12px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #ddd;padding:8px}
+    th{background:#f3f3f3;text-align:left}
+    a.btn{display:inline-block;margin-bottom:12px;padding:8px 12px;background:#0d6efd;color:#fff;text-decoration:none;border-radius:6px}
+    a.btn:hover{background:#2c695527}
+    /* Badges for estado */
+    .badge{display:inline-block;padding:6px 12px;border-radius:999px;font-weight:600;font-size:13px;line-height:1;vertical-align:middle}
+    .badge--activo{background:#ecfdf5;color:#065f46}
+    .badge--en-liberacion{background:#fffbeb;color:#92400e}
+    .badge--liberada{background:#eff6ff;color:#1e3a8a}
+    .badge--dada-baja{background:#fde2e1;color:#842029}
+    .badge--default{background:#ffffff;color:#111827;border:1px solid #e5e7eb}
+  </style>
+</head>
+<body>
+
+  <a href="/" class="btn">Volver al inicio</a>
+  <h1>Listado de Líneas</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Número</th>
+        <th>Usuario</th>
+        <th>Cargo</th>
+        <th>Ciudad</th>
+        <th>Plan</th>
+        <th>Tipo SIM</th>
+        <th>Estado</th>
+        <th>Observación</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for l in lineas %}
+      <tr>
+        <td>{{ l.id }}</td>
+        <td>{{ l.numero }}</td>
+        <td>{{ l.usuario or '—' }}</td>
+        <td>{{ l.cargo or '—' }}</td>
+        <td>{{ l.ciudad or '—' }}</td>
+
+        <!-- PLAN -->
+        <td>{{ l.plan or '—' }}</td>
+
+        <!-- GIGAS -->
+        <td>{{ l.gigas_plan or '—' }}</td>
+
+        
+
+        <td>{{ l.tipo_sim or '—' }}</td>
+        <td>
+          {% set est = l.estado or '—' %}
+          {% if est == '—' %}
+            —
+          {% else %}
+            {% set ll = est.lower() %}
+            {% if 'activo' in ll %}
+              {% set klass = 'badge badge--activo' %}
+            {% elif 'en liber' in ll or 'en liberaci' in ll %}
+              {% set klass = 'badge badge--en-liberacion' %}
+            {% elif 'liberad' in ll %}
+              {% set klass = 'badge badge--liberada' %}
+            {% elif 'dada' in ll and 'baja' in ll %}
+              {% set klass = 'badge badge--dada-baja' %}
+            {% else %}
+              {% set klass = 'badge badge--default' %}
+            {% endif %}
+            <span class="{{ klass }}">{{ est }}</span>
+          {% endif %}
+        </td>
+        <td>{{ l.observacion or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+
+</body>
+</html>

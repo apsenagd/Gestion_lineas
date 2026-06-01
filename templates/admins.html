@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:900px;margin:20px auto;padding:20px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.05)">
+    <a href="{{ url_for('profile') }}" class="btn-primary"><i class="fa fa-arrow-left"></i> Volver al perfil</a>
+    <h1 style="margin-top:0">Administradores</h1>
+  
+  <p style="color:#6b7280;margin-top:10px">Lista de administradores existentes y formulario para crear uno nuevo.</p>
+
+  <table class="table" style="width:100%;margin-top:12px;border-collapse:collapse">
+    <thead><tr><th>Usuario</th><th>Nombre</th><th>Email</th><th>Activo</th></tr></thead>
+    <tbody>
+      {% for a in admins %}
+        <tr><td>{{ a.username }}</td><td>{{ a.nombre or '—' }}</td><td>{{ a.email or '—' }}</td><td>{{ 'Sí' if a.activo else 'No' }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" style="color:#9ca3af">No hay administradores</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:18px">Crear nuevo administrador</h3>
+  <form method="post" action="{{ url_for('admin_manage_admins') }}" style="max-width:600px">
+    <label>Nombre</label>
+    <input id="admin-name" name="nombre" />
+    <label>Usuario</label>
+    <input id="admin-username" name="username" required />
+    <label>Email</label>
+    <input name="email" type="email" />
+    {% if admins %}
+      <div style="padding:12px;background:#e8f5e9;border-radius:6px;margin-bottom:12px;color:#2e7d32;font-size:13px">
+        ✓ Se usará automáticamente la contraseña compartida del sistema
+      </div>
+      <input name="password" type="hidden" value="" />
+      <input name="confirm" type="hidden" value="" />
+    {% else %}
+      <label>Contraseña compartida</label>
+      <div class="small" style="color:#6b7280;margin-top:-8px;margin-bottom:8px">Ingresa la contraseña para el primer administrador</div>
+      <input name="password" type="password" placeholder="Ingresa la contraseña" />
+      <label>Confirmar contraseña</label>
+      <input name="confirm" type="password" placeholder="Confirma la contraseña" />
+    {% endif %}
+    <div style="margin-top:12px"><button class="btn" type="submit">Crear administrador</button></div>
+  </form>
+
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const nameInput = document.getElementById('admin-name');
+  const usernameInput = document.getElementById('admin-username');
+  let lastAutoUsername = '';
+
+  function normalizeUsernamePart(text) {
+    const original = String(text || '');
+    const normalized = original.normalize ? original.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : original;
+    return normalized.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  function buildUsername(value) {
+    const parts = normalizeUsernamePart(value).split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    const first = parts[0];
+    const last = parts.length > 1 ? parts[1] : '';
+    return last ? `${first}.${last}` : first;
+  }
+
+  function updateUsername() {
+    if (!nameInput || !usernameInput) return;
+    const generated = buildUsername(nameInput.value);
+    if (!generated) return;
+    const current = usernameInput.value.trim();
+    if (current === '' || current === lastAutoUsername) {
+      usernameInput.value = generated;
+      lastAutoUsername = generated;
+    }
+  }
+
+  if (!nameInput || !usernameInput) return;
+  nameInput.addEventListener('input', updateUsername);
+  usernameInput.addEventListener('input', function() {
+    if (usernameInput.value.trim() !== lastAutoUsername) {
+      lastAutoUsername = '';
+    }
+  });
+  updateUsername();
+})();
+</script>
+{% endblock %}

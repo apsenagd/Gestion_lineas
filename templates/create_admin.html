@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Crear administrador - Gestión de Líneas</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#0f172a}
+    body{display:grid;place-items:center;background:#f3f6f7}
+    .card{width:720px;max-width:92%;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(2,6,23,0.12);overflow:hidden}
+    .card .body{padding:28px}
+    h1{margin:0 0 8px;font-size:20px;color:#0f5132}
+    label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
+    input{width:100%;padding:12px;border-radius:8px;border:1px solid #e6eef0;margin-bottom:12px}
+    .btn{display:inline-block;padding:10px 16px;background:#198754;color:#fff;border-radius:8px;border:none;font-weight:700;cursor:pointer}
+    .small{font-size:13px;color:#6b7280}
+    .back{color:#6b7280;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="body" style="max-width:640px;margin:18px auto">
+      <a href="{{ url_for('login') }}" class="back">&larr; Volver al ingreso</a>
+      <h1>Crear administrador</h1>
+      <p class="small">Cree una cuenta de administrador.</p>
+
+      <form method="post" action="{{ url_for('create_admin') }}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div style="margin-bottom:12px;color:#b00020">
+              {% for cat,msg in messages %}{{ msg }}{% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <label>Nombre</label>
+        <input id="create_nombre" name="nombre" value="{{ nombre or '' }}" placeholder="Nombre completo (opcional)" />
+        <label>Usuario</label>
+        <input id="create_username" name="username" required value="{{ username or '' }}" placeholder="Nombre de usuario" />
+        <div class="small" style="color:#6b7280;margin-top:-8px;margin-bottom:8px">Se autocompleta desde el nombre.</div>
+        <label>Email</label>
+        <input name="email" type="email" value="{{ email or '' }}" placeholder="Correo electrónico" />
+        <label>Contraseña compartida</label>
+        <div class="small" style="color:#6b7280;margin-top:-8px;margin-bottom:8px">Se usará automáticamente la contraseña compartida existente.</div>
+        <div id="password-fields" style="display:none">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="create_password" name="password" type="password" style="flex:1" placeholder="Ingresa la contraseña" />
+            <button id="create_toggle_pwd" type="button" class="small" style="background:transparent;border:none;cursor:pointer;color:#198754;font-weight:700" onclick="togglePassword('create_password','create_toggle_pwd')">Mostrar</button>
+          </div>
+          <label>Confirmar contraseña</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="create_confirm" name="confirm" type="password" style="flex:1" placeholder="Confirma la contraseña" />
+            <button id="create_toggle_confirm" type="button" class="small" style="background:transparent;border:none;cursor:pointer;color:#198754;font-weight:700" onclick="togglePassword('create_confirm','create_toggle_confirm')">Mostrar</button>
+          </div>
+        </div>
+        <div id="password-auto-msg" style="display:none;padding:12px;background:#e8f5e9;border-radius:6px;margin-bottom:12px;color:#2e7d32;font-size:13px">
+          ✓ Se usará automáticamente la contraseña compartida del sistema
+        </div>
+        <!-- registration key removed: not required -->
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn" type="submit">Crear administrador</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    function togglePassword(fieldId, btnId){
+      var inp = document.getElementById(fieldId);
+      var btn = document.getElementById(btnId);
+      if(!inp) return;
+      if(inp.type === 'password'){
+        inp.type = 'text';
+        if(btn) btn.textContent = 'Ocultar';
+      } else {
+        inp.type = 'password';
+        if(btn) btn.textContent = 'Mostrar';
+      }
+    }
+    
+    // Verificar si hay admins existentes
+    (function(){
+      try {
+        fetch('/api/check-admins', {method: 'GET'})
+          .then(r => r.json())
+          .then(data => {
+            var passwordFields = document.getElementById('password-fields');
+            var passwordMsg = document.getElementById('password-auto-msg');
+            if (data.exists_admin) {
+              // Ya hay admins - ocultar campos de contraseña
+              if (passwordFields) passwordFields.style.display = 'none';
+              if (passwordMsg) passwordMsg.style.display = 'block';
+            } else {
+              // No hay admins - mostrar campos de contraseña
+              if (passwordFields) passwordFields.style.display = 'block';
+              if (passwordMsg) passwordMsg.style.display = 'none';
+            }
+          })
+          .catch(e => {
+            // En error, mostrar campos (para que el usuario pueda crear el primer admin)
+            var passwordFields = document.getElementById('password-fields');
+            if (passwordFields) passwordFields.style.display = 'block';
+          });
+      } catch(e) {
+        console && console.warn && console.warn('check admins error', e);
+      }
+    })();
+    
+    // Autocompletar username a partir del nombre
+    (function(){
+      try{
+        var nombre = document.getElementById('create_nombre');
+        var username = document.getElementById('create_username');
+        if(!nombre || !username) return;
+        var usernameTouched = false;
+        // marcar como tocado si el usuario escribe manualmente
+        username.addEventListener('input', function(){ usernameTouched = true; });
+        username.addEventListener('focus', function(){ usernameTouched = true; });
+
+        function normalizeUsernamePart(s){
+          var original = String(s || '');
+          var normalized = original.normalize ? original.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : original;
+          return normalized.toLowerCase().replace(/[^a-z0-9\s._-]/g, ' ').trim();
+        }
+
+        function buildUsername(fullName){
+          var cleaned = normalizeUsernamePart(fullName).replace(/\s+/g, ' ');
+          var parts = cleaned.split(' ').filter(Boolean);
+          if(!parts.length) return '';
+          var first = parts[0];
+          var last = parts.length > 1 ? parts[1] : '';
+          return last ? first + '.' + last : first;
+        }
+
+        function updateUsername(){
+          if(usernameTouched) return;
+          var v = nombre.value || '';
+          var s = buildUsername(v);
+          if(s) username.value = s;
+        }
+
+        nombre.addEventListener('input', updateUsername);
+
+        // si al cargar hay nombre y username vacío, autocompletar
+        document.addEventListener('DOMContentLoaded', function(){
+          if(!username.value && nombre.value){ username.value = buildUsername(nombre.value); }
+        });
+      }catch(e){ console && console.warn && console.warn('autocomplete username error', e); }
+    })();
+  </script>
+</body>
+</html>

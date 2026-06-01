@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Reportes · Gestión{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <div class="card-header">
+      <div class="tabs">
+        <div class="tab active">Estadísticas</div>
+        </div>
+        <a href="{{ url_for('home_listado_lineas') }}" class="btn-primary">
+        <i class="fa fa-arrow-left"></i> Volver
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:18px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div class="card">
+          <h3>Total de líneas</h3>
+          <div style="font-size:28px;font-weight:800;color:var(--brand);">{{ stats.total_lineas if stats else '—' }}</div>
+        </div>
+      </div>
+
+      <div style="flex:2;min-width:260px;display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="card" style="flex:1;min-width:180px;">
+          <h3>Por Estado</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;">
+            <tbody>
+              {% if by_estado %}
+                {% for e in by_estado %}
+                  <tr>
+                    <td style="padding:6px 8px;">{{ e.nombre }}</td>
+                    <td style="padding:6px 8px;text-align:right;font-weight:700;">{{ e.cnt }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="2">Sin datos</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" style="flex:1;min-width:180px;">
+          <h3>Por Tipo SIM</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;">
+            <tbody>
+              {% if by_tipo %}
+                {% for t in by_tipo %}
+                  <tr>
+                    <td style="padding:6px 8px;">{{ t.nombre }}</td>
+                    <td style="padding:6px 8px;text-align:right;font-weight:700;">{{ t.cnt }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="2">Sin datos</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="card" style="flex:1;min-width:320px;">
+        <h3>Top planes</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;">
+          <thead><tr><th style="text-align:left;padding:6px 8px;">Plan</th><th style="text-align:right;padding:6px 8px;">Líneas</th></tr></thead>
+          <tbody>
+            {% if by_plan %}
+              {% for p in by_plan %}
+                <tr><td style="padding:6px 8px;">{{ p.nombre }}</td><td style="padding:6px 8px;text-align:right;font-weight:700;">{{ p.cnt }}</td></tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="2">Sin datos</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px;">
+        <h3>Visualizaciones</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <canvas id="chart-estado" width="400" height="240"></canvas>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <canvas id="chart-tipo" width="400" height="240"></canvas>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <canvas id="chart-plan" width="800" height="240"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Datos pasados desde servidor
+    const byEstado = {{ by_estado|tojson }} || [];
+    const byTipo = {{ by_tipo|tojson }} || [];
+    const byPlan = {{ by_plan|tojson }} || [];
+
+    function names(a){ return a.map(x=>x.nombre); }
+    function counts(a){ return a.map(x=>x.cnt); }
+
+    const estadoLabels = names(byEstado), estadoData = counts(byEstado);
+    const tipoLabels = names(byTipo), tipoData = counts(byTipo);
+    const planLabels = names(byPlan), planData = counts(byPlan);
+
+    function generateColors(n){
+      const palette = ['#6b21a8','#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#0ea5a4','#d946ef'];
+      const out = [];
+      for(let i=0;i<n;i++) out.push(palette[i%palette.length]);
+      return out;
+    }
+
+    // Pie: estados
+    try{
+      const ctxE = document.getElementById('chart-estado').getContext('2d');
+      new Chart(ctxE, {
+        type: 'pie',
+        data: { labels: estadoLabels, datasets:[{ data: estadoData, backgroundColor: generateColors(estadoLabels.length) }] },
+        options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+      });
+    }catch(e){ console.warn('chart estado failed', e); }
+
+    // Bar: tipos
+    try{
+      const ctxT = document.getElementById('chart-tipo').getContext('2d');
+      new Chart(ctxT, {
+        type: 'bar',
+        data: { labels: tipoLabels, datasets:[{ label:'Líneas', data: tipoData, backgroundColor: generateColors(tipoLabels.length) }] },
+        options: { responsive:true, scales:{ y:{ beginAtZero:true } }, plugins:{legend:{display:false}} }
+      });
+    }catch(e){ console.warn('chart tipo failed', e); }
+
+    // Bar: top planes
+    try{
+      const ctxP = document.getElementById('chart-plan').getContext('2d');
+      new Chart(ctxP, {
+        type: 'bar',
+        data: { labels: planLabels, datasets:[{ label:'Líneas', data: planData, backgroundColor: generateColors(planLabels.length) }] },
+        options: { responsive:true, scales:{ y:{ beginAtZero:true } }, plugins:{legend:{display:false}} }
+      });
+    }catch(e){ console.warn('chart plan failed', e); }
+  </script>
+{% endblock %}
