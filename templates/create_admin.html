@@ -23,7 +23,7 @@
       <h1>Crear administrador</h1>
       <p class="small">Cree una cuenta de administrador.</p>
 
-      <form method="post" action="{{ url_for('create_admin') }}">
+      <form method="post" action="{{ url_for('create_admin') }}" autocomplete="off">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div style="margin-bottom:12px;color:#b00020">
@@ -33,12 +33,14 @@
         {% endwith %}
 
         <label>Nombre</label>
-        <input id="create_nombre" name="nombre" value="{{ nombre or '' }}" placeholder="Nombre completo (opcional)" />
+        <input id="create_nombre" name="nombre" autocomplete="off" value="{{ nombre or '' }}" placeholder="Nombre completo (opcional)" />
         <label>Usuario</label>
-        <input id="create_username" name="username" required value="{{ username or '' }}" placeholder="Nombre de usuario" />
+        <!-- dummy field to discourage browser autofill -->
+        <input type="text" name="fake_username_autofill" id="fake_username_autofill" style="position:absolute; left:-9999px; top:-9999px;" autocomplete="username">
+        <input id="create_username" name="username" required autocomplete="off" value="{{ username or '' }}" placeholder="Nombre de usuario" />
         <div class="small" style="color:#6b7280;margin-top:-8px;margin-bottom:8px">Se autocompleta desde el nombre.</div>
         <label>Email</label>
-        <input name="email" type="email" value="{{ email or '' }}" placeholder="Correo electrónico" />
+        <input name="email" type="email" autocomplete="off" value="{{ email or '' }}" placeholder="Correo electrónico" />
         <label>Contraseña compartida</label>
         <div class="small" style="color:#6b7280;margin-top:-8px;margin-bottom:8px">Se usará automáticamente la contraseña compartida existente.</div>
         <div id="password-fields" style="display:none">
@@ -111,9 +113,11 @@
         var username = document.getElementById('create_username');
         if(!nombre || !username) return;
         var usernameTouched = false;
-        // marcar como tocado si el usuario escribe manualmente
-        username.addEventListener('input', function(){ usernameTouched = true; });
-        username.addEventListener('focus', function(){ usernameTouched = true; });
+        // marcar como tocado si el usuario escribe manualmente (si queda vacío, se considera "no tocado")
+        username.addEventListener('input', function(){
+          if(username.value && username.value.trim() !== '') usernameTouched = true;
+          else usernameTouched = false;
+        });
 
         function normalizeUsernamePart(s){
           var original = String(s || '');
@@ -131,7 +135,8 @@
         }
 
         function updateUsername(){
-          if(usernameTouched) return;
+          // Si el usuario escribió manualmente y el campo username tiene contenido, no sobreescribir.
+          if(usernameTouched && username.value && username.value.trim() !== '') return;
           var v = nombre.value || '';
           var s = buildUsername(v);
           if(s) username.value = s;
@@ -141,7 +146,19 @@
 
         // si al cargar hay nombre y username vacío, autocompletar
         document.addEventListener('DOMContentLoaded', function(){
+          // Si el navegador ha autocompletado username pero no hay nombre, limpiar para permitir autocompletar desde nombre
+          try{
+            if(!nombre.value && username.value){ username.value = ''; usernameTouched = false; }
+          }catch(e){}
           if(!username.value && nombre.value){ username.value = buildUsername(nombre.value); }
+
+          // Algunos navegadores aplican autofill después del evento DOMContentLoaded; reintentar breve tiempo después
+          setTimeout(function(){
+            try{
+              if(!nombre.value && username.value){ username.value = ''; usernameTouched = false; }
+              if(!username.value && nombre.value){ username.value = buildUsername(nombre.value); }
+            }catch(e){}
+          }, 250);
         });
       }catch(e){ console && console.warn && console.warn('autocomplete username error', e); }
     })();

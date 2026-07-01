@@ -81,6 +81,7 @@
         {% endif %}
       </p>
       <p><strong>Observación:</strong> {{ linea.observacion or '—' }}</p>
+      <p><strong>Operador:</strong> {{ linea.operador or '—' }}</p>
     </div>
 
     <!-- Plan -->
@@ -100,6 +101,39 @@
         </div>
         <button class="btn-primary" type="submit"><i class="fa fa-rotate"></i> Cambiar plan</button>
       </form>
+
+      <!-- Operador -->
+      <hr style="margin: 15px 0; border: none; border-top: 1px solid #e5e7eb;">
+      <p style="margin-bottom: 8px; color: #6b7280; font-size: 13px;"><strong>Operador:</strong> {{ linea.operador or '—' }}</p>
+
+      <form method="post" action="{{ url_for('cambiar_operador', linea_id=linea.id) }}">
+        <div class="form-group">
+          <label for="id_operador">Cambiar operador</label>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <select id="id_operador" name="id_operador">
+                <option value="">-- Selecciona operador --</option>
+                {% for op in operadores %}
+                  <option value="{{ op.id_operador }}" {% if op.id_operador == linea.id_operador %}selected{% endif %}>{{ op.nombre_operador }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button class="btn-primary" type="submit" style="flex: 0 0 auto;"><i class="fa fa-rotate"></i> Cambiar</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Agregar nuevo operador -->
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+        <form method="post" action="{{ url_for('crear_operador') }}" style="display: flex; gap: 8px; align-items: flex-end;">
+          <input type="hidden" name="linea_id" value="{{ linea.id }}">
+          <div style="flex: 1;">
+            <label for="nuevo_operador" style="font-size: 12px; color: #6b7280;">Nuevo operador:</label>
+            <input type="text" id="nuevo_operador" name="nombre_operador" placeholder="Ej: Operador nuevo" style="width: 100%; padding: 6px 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 4px;">
+          </div>
+          <button class="btn-primary" type="submit" style="flex: 0 0 auto; font-size: 12px; padding: 6px 12px;"><i class="fa fa-plus"></i> Crear</button>
+        </form>
+      </div>
     </div>
 
     <!-- Asignación -->
@@ -149,10 +183,24 @@
 
         <div class="form-group">
           <label for="id_estado">Estado</label>
+          {% set estado_descripciones = {
+            'en cesión': 'Transferencia de línea personal a corporativa en proceso.',
+            'cesionada': 'Línea transferida exitosamente a la empresa.',
+            'en liberación': 'Transferencia de línea corporativa a personal en proceso.',
+            'liberada': 'Línea transferida exitosamente al usuario.',
+            'activo': 'Línea habilitada para uso.',
+            'activa': 'Línea habilitada para uso.',
+            'inactivo': 'Línea temporalmente fuera de servicio.',
+            'inactiva': 'Línea temporalmente fuera de servicio.',
+            'dada de baja': 'Línea cancelada definitivamente.'
+          } %}
           <select id="id_estado" name="id_estado">
             <option value="">(mantener)</option>
             {% for e in estados %}
-              <option value="{{ e.id_estado }}" {% if e.id_estado == linea.id_estado %}selected{% endif %}>{{ e.nombre_estado }}</option>
+              {% set descripcion = estado_descripciones.get(e.nombre_estado|lower) %}
+              <option value="{{ e.id_estado }}" {% if e.id_estado == linea.id_estado %}selected{% endif %}>
+                {{ e.nombre_estado }}{% if descripcion %} — {{ descripcion }}{% endif %}
+              </option>
             {% endfor %}
           </select>
         </div>

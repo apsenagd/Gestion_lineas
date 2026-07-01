@@ -1,0 +1,32 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.venv-1/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# VS Code settings (optional)
+# .vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Database
+*.sqlite3

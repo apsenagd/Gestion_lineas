@@ -668,7 +668,6 @@
     <div class="topbar">
       <h2 style="margin:0; font-weight:800;">Gestión de Líneas</h2>
       <div class="actions">
-        <div class="btn-icon" title="Notificaciones"><i class="fa fa-bell"></i></div>
         <a href="{{ url_for('profile') }}" class="btn-icon" title="Perfil"><i class="fa fa-user"></i></a>
       </div>
     </div>
@@ -677,7 +676,7 @@
   </main>
 
     <script>
-      // global safeToast: prefer an existing showToast implementation, fallback to a simple toast UI
+      // global safeToast
       window.safeToast = function(msg, type='info', ttl=3000){
         try{ if(typeof window.showToast === 'function' && window.showToast !== window.safeToast){ window.showToast(msg, type, ttl); return; } }catch(_e){}
         // Suppress this specific noisy corner error toast requested by user

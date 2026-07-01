@@ -176,10 +176,22 @@
 
             <div class="field">
               <label for="id_estado">Estado</label>
+              {% set estado_descripciones = {
+                'en cesión': 'Transferencia de línea personal a corporativa en proceso.',
+                'cesionada': 'Línea transferida exitosamente a la empresa.',
+                'en liberación': 'Transferencia de línea corporativa a personal en proceso.',
+                'liberada': 'Línea transferida exitosamente al usuario.',
+                'activo': 'Línea habilitada para uso.',
+                'activa': 'Línea habilitada para uso.',
+                'inactivo': 'Línea temporalmente fuera de servicio.',
+                'inactiva': 'Línea temporalmente fuera de servicio.',
+                'dada de baja': 'Línea cancelada definitivamente.'
+              } %}
               <select name="id_estado" id="id_estado">
                 <option value="">-- Seleccionar --</option>
                 {% for e in estados %}
-                  <option value="{{ e.id_estado }}">{{ e.nombre_estado }}</option>
+                  {% set descripcion = estado_descripciones.get(e.nombre_estado|lower) %}
+                  <option value="{{ e.id_estado }}">{{ e.nombre_estado }}{% if descripcion %} — {{ descripcion }}{% endif %}</option>
                 {% endfor %}
               </select>
             </div>

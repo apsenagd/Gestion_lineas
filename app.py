@@ -24,6 +24,7 @@ from email.message import EmailMessage
 try:
     from openpyxl import Workbook
     from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     OPENPYXL_AVAILABLE = True
 except Exception:
     OPENPYXL_AVAILABLE = False
@@ -835,6 +836,7 @@ def detalle_linea(linea_id):
             p.precio_mensual AS precio_plan,
             ts.id_tipo_sim, ts.nombre_tipo AS tipo_sim,
             es.id_estado, es.nombre_estado AS estado,
+            l.id_operador, op.nombre_operador AS operador,
             COALESCE(l.observacion, '') AS observacion
         FROM lineas l
         LEFT JOIN usuarios      u  ON u.id_usuario    = l.id_usuario
@@ -847,6 +849,7 @@ def detalle_linea(linea_id):
         LEFT JOIN planes        p  ON p.id_plan       = l.id_plan
         LEFT JOIN tipos_sim     ts ON ts.id_tipo_sim  = l.id_tipo_sim
         LEFT JOIN estados_linea es ON es.id_estado    = l.id_estado
+        LEFT JOIN operadores    op ON op.id_operador  = l.id_operador
         WHERE l.id_linea = %s
     """, (linea_id,))
     linea = cur.fetchone()
@@ -878,6 +881,8 @@ def detalle_linea(linea_id):
     tipos = cur.fetchall()
     cur.execute("SELECT id_ciudad, nombre_ciudad FROM ciudades ORDER BY nombre_ciudad")
     ciudades = cur.fetchall()
+    cur.execute("SELECT id_operador, nombre_operador FROM operadores ORDER BY nombre_operador")
+    operadores = cur.fetchall()
     # 'En cesión' and 'Cesionada' 
     try:
         try:
@@ -939,7 +944,7 @@ def detalle_linea(linea_id):
     return render_template("detalle_linea.html",
                            linea=linea, planes=planes, tipos=tipos,
                            ciudades=ciudades, estados=estados,
-                           usuarios=usuarios, novedades=novedades)
+                           usuarios=usuarios, operadores=operadores, novedades=novedades)
 
 # =========================
 # ACCIONES (POST)
@@ -1013,6 +1018,136 @@ def cambiar_plan(linea_id):
     
     flash('✓ Plan actualizado exitosamente', 'success')
     return redirect(url_for('detalle_linea', linea_id=linea_id))
+
+# =========================
+# Cambiar operador
+# =========================
+@app.post('/lineas/<int:linea_id>/cambiar_operador')
+def cambiar_operador(linea_id):
+    """Cambia el operador de una línea y registra la novedad"""
+    id_operador_nuevo = request.form.get('id_operador', type=int)
+    if not id_operador_nuevo:
+        return redirect(url_for('detalle_linea', linea_id=linea_id))
+
+    try:
+        db = conectar_db()
+        cur = db.cursor(dictionary=True)
+    except Exception as e:
+        print(f"cambiar_operador: DB connection failed: {e}")
+        return make_response(jsonify({"error": "Error connecting to database."}), 503)
+
+    # Operador anterior
+    cur.execute("""
+        SELECT op.nombre_operador
+        FROM lineas l LEFT JOIN operadores op ON op.id_operador = l.id_operador
+        WHERE l.id_linea = %s
+    """, (linea_id,))
+    row = cur.fetchone()
+    operador_anterior = row['nombre_operador'] if row else '—'
+
+    # Operador nuevo
+    cur.execute("SELECT nombre_operador FROM operadores WHERE id_operador = %s", (id_operador_nuevo,))
+    row = cur.fetchone()
+    operador_nuevo = row['nombre_operador'] if row else '—'
+
+    # Actualizar con retry por lock
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if has_fecha_modificacion():
+                sql = "UPDATE lineas SET id_operador = %s, fecha_modificacion = NOW() WHERE id_linea = %s"
+            else:
+                sql = "UPDATE lineas SET id_operador = %s WHERE id_linea = %s"
+            cur.execute(sql, (id_operador_nuevo, linea_id))
+            break  # Success, exit loop
+        except mysql.connector.errors.DatabaseError as e:
+            if "Lock wait timeout" in str(e) and attempt < max_retries - 1:
+                time.sleep(0.5)  # Wait 0.5 seconds before retry
+                continue
+            else:
+                raise  # Re-raise if not lock timeout or max retries reached
+
+    # Touch helper table so this edit surfaces in listings
+    try:
+            try:
+                touch_linea_in_memory(linea_id)
+            except Exception:
+                app.logger.exception('Could not touch linea in memory after cambiar_operador')
+    except Exception:
+        pass
+
+    # Registrar novedad
+    registrar_novedad(
+        db=db,
+        id_linea=linea_id,
+        tipo='OPERADOR',
+        detalle=f'Operador cambiado de {operador_anterior} a {operador_nuevo}',
+        valor_anterior=operador_anterior,
+        valor_nuevo=operador_nuevo
+    )
+    
+    cur.close()
+    db.close()
+    
+    flash('✓ Operador actualizado exitosamente', 'success')
+    return redirect(url_for('detalle_linea', linea_id=linea_id))
+
+# =========================
+# Crear nuevo operador
+# =========================
+@app.post('/operadores/crear')
+def crear_operador():
+    """Crea un nuevo operador"""
+    nombre_operador = request.form.get('nombre_operador', '').strip()
+    linea_id = request.form.get('linea_id', type=int)
+    
+    if not nombre_operador:
+        if linea_id:
+            flash('✗ El nombre del operador no puede estar vacío', 'error')
+            return redirect(url_for('detalle_linea', linea_id=linea_id))
+        else:
+            return make_response(jsonify({"error": "El nombre del operador no puede estar vacío"}), 400)
+
+    try:
+        db = conectar_db()
+        cur = db.cursor(dictionary=True)
+        
+        # Verificar si ya existe un operador con ese nombre
+        cur.execute("SELECT id_operador FROM operadores WHERE LOWER(nombre_operador) = LOWER(%s)", (nombre_operador,))
+        if cur.fetchone():
+            if linea_id:
+                flash(f'✗ El operador "{nombre_operador}" ya existe', 'error')
+                return redirect(url_for('detalle_linea', linea_id=linea_id))
+            else:
+                cur.close()
+                db.close()
+                return make_response(jsonify({"error": f'El operador "{nombre_operador}" ya existe'}), 400)
+        
+        # Crear nuevo operador
+        cur.execute("INSERT INTO operadores (nombre_operador) VALUES (%s)", (nombre_operador,))
+        db.commit()
+        
+        if linea_id:
+            flash(f'✓ Operador "{nombre_operador}" creado exitosamente', 'success')
+            result = redirect(url_for('detalle_linea', linea_id=linea_id))
+        else:
+            cur.execute("SELECT id_operador FROM operadores WHERE nombre_operador = %s", (nombre_operador,))
+            row = cur.fetchone()
+            new_id = row['id_operador'] if row else None
+            result = make_response(jsonify({"id_operador": new_id, "nombre_operador": nombre_operador}), 201)
+        
+        cur.close()
+        db.close()
+        
+        return result
+        
+    except Exception as e:
+        print(f"crear_operador: Error: {e}")
+        if linea_id:
+            flash(f'✗ Error al crear operador: {e}', 'error')
+            return redirect(url_for('detalle_linea', linea_id=linea_id))
+        else:
+            return make_response(jsonify({"error": str(e)}), 500)
 
 # =========================
 # Asignar línea a usuario
@@ -1176,7 +1311,8 @@ def devolver_linea(linea_id):
         ti_id = None
         ti_name = None
 
-    # Ajustar estado de línea a Inactiva al devolverla
+    # Obtener estados para la devolución
+    id_estado_activa = get_estado_id(cur, 'Activa')
     id_estado_inactiva = get_estado_id(cur, 'Inactiva')
 
     # Actualizar línea (reasignar a TI si existe, sino poner id_usuario a NULL) con retry
@@ -1184,20 +1320,22 @@ def devolver_linea(linea_id):
     for attempt in range(3):
         try:
             if ti_id:
+                # Cuando se devuelve a TI, cambiar estado a Activa
                 params = [ti_id]
                 sql = "UPDATE lineas SET id_usuario = %s, id_ciudad = 1"
                 if ti_id_jefe:
                     sql += ", id_jefe = %s"
                     params.append(ti_id_jefe)
-                if id_estado_inactiva is not None:
+                if id_estado_activa is not None:
                     sql += ", id_estado = %s"
-                    params.append(id_estado_inactiva)
+                    params.append(id_estado_activa)
                 if has_fecha_modificacion():
                     sql += ", fecha_modificacion = NOW()"
                 sql += " WHERE id_linea = %s"
                 params.append(linea_id)
                 cur.execute(sql, tuple(params))
             else:
+                # Cuando no hay TI, cambiar estado a Inactiva
                 params = [linea_id]
                 sql = "UPDATE lineas SET id_usuario = NULL, id_ciudad = 1"
                 if id_estado_inactiva is not None:
@@ -1935,6 +2073,22 @@ def api_create_linea():
     except Exception:
         app.logger.exception('Could not touch linea in memory after creating linea')
 
+    # Registrar novedad inicial de creación/asignación
+    try:
+        cur.execute("SELECT nombre FROM usuarios WHERE id_usuario = %s LIMIT 1", (id_usuario,))
+        usuario_row = cur.fetchone()
+        nombre_usuario = usuario_row['nombre'] if usuario_row else '—'
+        registrar_novedad(
+            db=db,
+            id_linea=new_id,
+            tipo='ASIGNACION',
+            detalle=f'Línea creada y asignada a {nombre_usuario}',
+            valor_anterior='—',
+            valor_nuevo=nombre_usuario
+        )
+    except Exception:
+        app.logger.exception('Could not register initial assignment novedad')
+
     cur.execute("SELECT id_linea, numero_linea FROM lineas WHERE id_linea = %s", (new_id,))
     nl = cur.fetchone()
     cur.close()
@@ -2446,18 +2600,70 @@ def export_lineas_xlsx():
         print(f"export_lineas_xlsx SELECT failed: {e}")
         return make_response('Query failed', 500)
 
-    # Crear workbook
+    # Crear workbook y aplicar formato más amigable para Excel
     wb = Workbook()
     ws = wb.active
     ws.title = 'Lineas'
 
     headers = ['ID','Número','Usuario','Cargo','Ciudad','Regional','Plan','Gigas Plan','Tipo SIM','Estado','Observación']
-    ws.append(headers)
 
+    # Título en la primera fila (merge sobre todas las columnas)
+    title = f"Exportación de líneas - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+    title_cell = ws.cell(row=1, column=1, value=title)
+    title_cell.font = Font(size=14, bold=True)
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    # Fila de información (filtros aplicados) en la segunda fila si aplica
+    info_items = []
+    if q:
+        info_items.append(f"q={q}")
+    if plan_f:
+        info_items.append(f"plan={plan_f}")
+    if tipo_sim_f:
+        info_items.append(f"tipo_sim={tipo_sim_f}")
+    if estado_f:
+        info_items.append(f"estado={estado_f}")
+    info_text = ' | '.join(info_items)
+    header_row_idx = 2
+    if info_text:
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+        info_cell = ws.cell(row=2, column=1, value=info_text)
+        info_cell.alignment = Alignment(horizontal='center')
+        header_row_idx = 3
+    else:
+        header_row_idx = 2
+
+    # Escribir fila de encabezados con estilo
+    header_fill = PatternFill(start_color='4F81BD', end_color='4F81BD', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin = Side(border_style="thin", color="000000")
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=header_row_idx, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Agregar filas de datos
     for r in rows:
         ws.append([
             r.get('id'), r.get('numero'), r.get('usuario'), r.get('cargo'), r.get('ciudad'), r.get('regional'), r.get('plan'), r.get('gigas_plan'), r.get('tipo_sim'), r.get('estado'), r.get('observacion')
         ])
+
+    # Aplicar color alternado a las filas de datos
+    data_start = header_row_idx + 1
+    light_fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+    alt_fill = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+    for i, row in enumerate(ws.iter_rows(min_row=data_start, max_row=ws.max_row, min_col=1, max_col=len(headers)), start=0):
+        fill = light_fill if i % 2 == 0 else alt_fill
+        for cell in row:
+            # preservar encabezado/other formatting
+            if cell.row >= data_start:
+                cell.fill = fill
+
+    # Congelar paneles justo debajo de la fila de encabezado
+    ws.freeze_panes = ws.cell(row=data_start, column=1)
 
     # Ajustar anchos de columna básicos
     for i, col in enumerate(ws.columns, 1):
