@@ -58,15 +58,16 @@ def col_currency(value):
 def conectar_db():
     try:
         db = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Mysql2026*",   #clave
+            host=os.getenv("MYSQLHOST"),
+            user=os.getenv("MYSQLUSER"),
+            password=os.getenv("MYSQLPASSWORD"),
             database="gestion_lineas",
+            port=int(os.getenv("MYSQLPORT")),
             charset="utf8mb4",
             use_unicode=True,
             autocommit=True,
             connection_timeout=5
-        )
+       )
     except Exception as e:
         print(f"Error conectando a la base de datos: {e}")
         raise
