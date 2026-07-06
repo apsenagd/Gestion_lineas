@@ -2470,6 +2470,7 @@ def export_lineas():
                 l.numero_linea AS numero,
                 u.nombre AS usuario,
                 c.nombre_cargo AS cargo,
+                COALESCE(j.nombre_jefe, '') AS jefe_encargado,
                 ci.nombre_ciudad AS ciudad,
                 r.nombre_regional AS regional,
                 p.nombre_plan AS plan,
@@ -2480,6 +2481,7 @@ def export_lineas():
             FROM lineas l
             LEFT JOIN usuarios      u  ON u.id_usuario   = l.id_usuario
             LEFT JOIN cargos        c  ON c.id_cargo     = u.id_cargo
+            LEFT JOIN jefes         j  ON j.id_jefe      = l.id_jefe
             LEFT JOIN ciudades      ci ON ci.id_ciudad   = l.id_ciudad
             LEFT JOIN regionales    r  ON r.id_regional  = ci.id_regional
             LEFT JOIN tipos_sim     ts ON ts.id_tipo_sim = l.id_tipo_sim
@@ -2501,11 +2503,11 @@ def export_lineas():
     # Construir CSV en memoria (UTF-8 con BOM para Excel)
     output = io.StringIO()
     writer = csv.writer(output)
-    header = ['ID','Número','Usuario','Cargo','Ciudad','Regional','Plan','Gigas Plan','Tipo SIM','Estado','Observación']
+    header = ['ID','Número','Usuario','Cargo','Jefe Encargado','Ciudad','Regional','Plan','Gigas Plan','Tipo SIM','Estado','Observación']
     writer.writerow(header)
     for r in rows:
         writer.writerow([
-            r.get('id'), r.get('numero'), r.get('usuario'), r.get('cargo'), r.get('ciudad'), r.get('regional'), r.get('plan'), r.get('gigas_plan'), r.get('tipo_sim'), r.get('estado'), r.get('observacion')
+            r.get('id'), r.get('numero'), r.get('usuario'), r.get('cargo'), r.get('jefe_encargado'), r.get('ciudad'), r.get('regional'), r.get('plan'), r.get('gigas_plan'), r.get('tipo_sim'), r.get('estado'), r.get('observacion')
         ])
 
     csv_data = output.getvalue()
@@ -2572,6 +2574,7 @@ def export_lineas_xlsx():
                 l.numero_linea AS numero,
                 u.nombre AS usuario,
                 c.nombre_cargo AS cargo,
+                COALESCE(j.nombre_jefe, '') AS jefe_encargado,
                 ci.nombre_ciudad AS ciudad,
                 r.nombre_regional AS regional,
                 p.nombre_plan AS plan,
@@ -2582,6 +2585,7 @@ def export_lineas_xlsx():
             FROM lineas l
             LEFT JOIN usuarios      u  ON u.id_usuario   = l.id_usuario
             LEFT JOIN cargos        c  ON c.id_cargo     = u.id_cargo
+            LEFT JOIN jefes         j  ON j.id_jefe      = l.id_jefe
             LEFT JOIN ciudades      ci ON ci.id_ciudad   = l.id_ciudad
             LEFT JOIN regionales    r  ON r.id_regional  = ci.id_regional
             LEFT JOIN tipos_sim     ts ON ts.id_tipo_sim = l.id_tipo_sim
@@ -2605,7 +2609,7 @@ def export_lineas_xlsx():
     ws = wb.active
     ws.title = 'Lineas'
 
-    headers = ['ID','Número','Usuario','Cargo','Ciudad','Regional','Plan','Gigas Plan','Tipo SIM','Estado','Observación']
+    headers = ['ID','Número','Usuario','Cargo','Jefe Encargado','Ciudad','Regional','Plan','Gigas Plan','Tipo SIM','Estado','Observación']
 
     # Título en la primera fila (merge sobre todas las columnas)
     title = f"Exportación de líneas - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -2648,7 +2652,7 @@ def export_lineas_xlsx():
     # Agregar filas de datos
     for r in rows:
         ws.append([
-            r.get('id'), r.get('numero'), r.get('usuario'), r.get('cargo'), r.get('ciudad'), r.get('regional'), r.get('plan'), r.get('gigas_plan'), r.get('tipo_sim'), r.get('estado'), r.get('observacion')
+            r.get('id'), r.get('numero'), r.get('usuario'), r.get('cargo'), r.get('jefe_encargado'), r.get('ciudad'), r.get('regional'), r.get('plan'), r.get('gigas_plan'), r.get('tipo_sim'), r.get('estado'), r.get('observacion')
         ])
 
     # Aplicar color alternado a las filas de datos
