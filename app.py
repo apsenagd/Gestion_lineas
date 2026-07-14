@@ -62,7 +62,9 @@ def conectar_db():
             user=os.getenv("PSQLUSER"),
             password=os.getenv("PSQLPASSWORD"),
             dbname=os.getenv("DB_NAME"),
-            port=int(os.getenv("PSQLPORT")),
+            port=int(os.getenv("PSQLPORT", "5432")),
+            sslmode="require",
+            connect_timeout=5
        )
         db.autocommit = True
 
