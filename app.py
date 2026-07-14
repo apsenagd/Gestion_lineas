@@ -8,6 +8,7 @@ try:
 except Exception:
     PASSLIB_SCRYPT_AVAILABLE = False
 import os
+from psycopg2.extras import RealDictCursor
 import psycopg2
 from jinja2 import Environment
 import socket
@@ -226,7 +227,7 @@ def login():
         try:
             app.logger.info('Intento de login para: %s', user)
             db = conectar_db()
-            cur = db.cursor(dictionary=True)
+            cur = db.cursor(cursor_factory=RealDictCursor)
             # buscar por username o email para mayor flexibilidad
             cur.execute("SELECT id_admin, username, password_hash, nombre, activo FROM admins WHERE username = %s OR email = %s LIMIT 1", (user, user))
             row = cur.fetchone()
@@ -311,7 +312,7 @@ def check_admins():
     """Verificar si existen administradores en la base de datos."""
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
         cur.execute('SELECT COUNT(1) AS cnt FROM admins')
         row = cur.fetchone()
         admins_count = int(row.get('cnt', 0)) if row else 0
@@ -332,7 +333,7 @@ def create_admin():
     # Permitir creación automática si no hay admins aún, o si la sesión es admin
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
         cur.execute('SELECT COUNT(1) AS cnt FROM admins')
         row = cur.fetchone()
         admins_count = int(row.get('cnt', 0)) if row else 0
@@ -374,7 +375,7 @@ def create_admin():
         
         try:
             db = conectar_db()
-            cur = db.cursor(dictionary=True)
+            cur = db.cursor(cursor_factory=RealDictCursor)
             cur.execute('SELECT COUNT(1) AS cnt FROM admins WHERE username = %s OR email = %s', (username, email or None))
             if cur.fetchone().get('cnt', 0) > 0:
                 try:
@@ -516,7 +517,7 @@ def profile():
         aid = session.get('admin_id')
         if aid:
             db = conectar_db()
-            cur = db.cursor(dictionary=True)
+            cur = db.cursor(cursor_factory=RealDictCursor)
             cur.execute('SELECT id_admin, username, email, nombre, activo FROM admins WHERE id_admin = %s LIMIT 1', (int(aid),))
             row = cur.fetchone()
             try:
@@ -542,7 +543,7 @@ def admin_manage_admins():
     db = None
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception:
         flash('No se puede conectar a la base de datos')
         return redirect(url_for('profile'))
@@ -620,7 +621,7 @@ def forgot_password():
             return render_template('forgot_password.html')
         try:
             db = conectar_db()
-            cur = db.cursor(dictionary=True)
+            cur = db.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT id_admin, username, email, activo FROM admins WHERE username = %s OR email = %s LIMIT 1", (identifier, identifier))
             row = cur.fetchone()
             try:
@@ -673,7 +674,7 @@ def reset_password(token):
             
             new_hash = generate_password_hash(pwd, method='pbkdf2:sha256')
             db = conectar_db()
-            cur = db.cursor()
+            cur = db.cursor(cursor_factory=RealDictCursor)
             cur.execute("UPDATE admins SET password_hash = %s", (new_hash,))
             try:
                 cur.close(); db.close()
@@ -812,7 +813,7 @@ def home_listado_lineas():
 def detalle_linea(linea_id):
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"detalle_linea: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -954,7 +955,7 @@ def cambiar_plan(linea_id):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"cambiar_plan: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1027,7 +1028,7 @@ def cambiar_operador(linea_id):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"cambiar_operador: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1106,7 +1107,7 @@ def crear_operador():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
         
         # Verificar si ya existe un operador con ese nombre
         cur.execute("SELECT id_operador FROM operadores WHERE LOWER(nombre_operador) = LOWER(%s)", (nombre_operador,))
@@ -1158,7 +1159,7 @@ def asignar_linea(linea_id):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"asignar_linea: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1273,7 +1274,7 @@ def devolver_linea(linea_id):
     """Devuelve una línea (quita el usuario asignado)"""
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"devolver_linea: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1386,7 +1387,7 @@ def editar_basico(linea_id):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"editar_basico: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1551,7 +1552,7 @@ def crear_linea():
     # Cargar catálogos necesarios para el formulario
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_usuarios: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1614,7 +1615,7 @@ def api_get_usuarios():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_usuario: DB connection failed: {e}")
         traceback.print_exc()
@@ -1656,7 +1657,7 @@ def api_create_usuario():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_linea: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1767,7 +1768,7 @@ def api_create_cargo():
         return make_response(jsonify({"error": "Nombre de cargo obligatorio."}), 400)
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_cargo: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1799,7 +1800,7 @@ def api_create_cargo():
 def api_get_usuario(id_usuario):
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_usuario: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -1839,7 +1840,7 @@ def api_update_usuario(id_usuario):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_update_usuario: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -2027,7 +2028,7 @@ def api_create_linea():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_planes: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -2100,7 +2101,7 @@ def api_check_numero():
         return make_response(jsonify({"error": "Parametro 'numero' requerido."}), 400)
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT id_linea FROM lineas WHERE numero_linea = %s LIMIT 1", (numero,))
         row = cur.fetchone()
         cur.close()
@@ -2131,7 +2132,7 @@ def api_get_planes():
     limit = request.args.get('limit', type=int) or 50
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_plan: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -2159,7 +2160,7 @@ def api_create_plan():
         return make_response(jsonify({"error": "Nombre de plan obligatorio."}), 400)
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_jefes: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -2292,7 +2293,7 @@ def api_get_lineas():
     try:
         # Paginar y ordenar en SQL para persistencia y rendimiento
         offset = (page - 1) * per_page
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
         start = time.time()
         has_fmod = has_fecha_modificacion()
         fecha_field = "l.fecha_modificacion AS fecha_modificacion," if has_fmod else ""
@@ -2454,7 +2455,7 @@ def export_lineas():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"export_lineas: DB connection failed: {e}")
         return make_response('DB unavailable', 503)
@@ -2558,7 +2559,7 @@ def export_lineas_xlsx():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"export_lineas_xlsx: DB connection failed: {e}")
         return make_response('DB unavailable', 503)
@@ -2733,7 +2734,7 @@ def api_ensure_estados_cesion():
     renamed = []
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
 
         #  'Transferida' 
         cur.execute("SELECT id_estado FROM estados_linea WHERE LOWER(nombre_estado) = %s LIMIT 1", ("transferida",))
@@ -2856,7 +2857,7 @@ def reportes_index():
     # Mostrar estadísticas básicas: total de líneas, por tipo SIM y por estado
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         app.logger.exception('reportes_index: DB connection failed')
         return render_template('reportes.html', stats=None, by_tipo=[], by_estado=[], by_plan=[])
@@ -2935,7 +2936,7 @@ def reportes_novedades():
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception:
         return make_response(jsonify({"error": "DB connection failed"}), 503)
 
@@ -2990,7 +2991,7 @@ def api_get_jefes():
     limit = request.args.get('limit', type=int) or 50
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_jefe: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -3079,7 +3080,7 @@ def api_create_jefe():
     if not nombre or not regional_ids:
         return make_response(jsonify({"error": "Nombre y al menos una regional obligatorios."}), 400)
     db = conectar_db()
-    cur = db.cursor(dictionary=True)
+    cur = db.cursor(cursor_factory=RealDictCursor)
     # opcional unicidad por nombre
     cur.execute("SELECT COUNT(1) AS cnt FROM jefes WHERE nombre_jefe = %s", (nombre,))
     if cur.fetchone()['cnt'] > 0:
@@ -3148,7 +3149,7 @@ def api_create_jefe():
 def api_get_jefe(id_jefe):
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_jefe: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -3195,7 +3196,7 @@ def api_update_jefe(id_jefe):
 
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_update_jefe: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -3257,7 +3258,7 @@ def api_get_ciudades():
     limit = request.args.get('limit', type=int) or 200
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_get_ciudades: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -3289,7 +3290,7 @@ def api_create_regional():
         return make_response(jsonify({"error": "Nombre de regional obligatorio."}), 400)
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_regional: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
@@ -3328,7 +3329,7 @@ def api_create_ciudad():
         return make_response(jsonify({"error": "Nombre de ciudad y regional obligatorios."}), 400)
     try:
         db = conectar_db()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor(cursor_factory=RealDictCursor)
     except Exception as e:
         print(f"api_create_ciudad: DB connection failed: {e}")
         return make_response(jsonify({"error": "Error connecting to database."}), 503)
