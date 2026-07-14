@@ -8,7 +8,7 @@ try:
 except Exception:
     PASSLIB_SCRYPT_AVAILABLE = False
 import os
-import mysql.connector
+import psycopg2
 from jinja2 import Environment
 import socket
 import hashlib
@@ -57,29 +57,18 @@ def col_currency(value):
 
 def conectar_db():
     try:
-        db = mysql.connector.connect(
-            host=os.getenv("MYSQLHOST"),
-            user=os.getenv("MYSQLUSER"),
-            password=os.getenv("MYSQLPASSWORD"),
-            database="gestion_lineas",
-            port=int(os.getenv("MYSQLPORT")),
-            charset="utf8mb4",
-            use_unicode=True,
-            autocommit=True,
-            connection_timeout=5
+        db = psycopg2.connect(
+            host=os.getenv("PSQLHOST"),
+            user=os.getenv("PSQLUSER"),
+            password=os.getenv("PSQLPASSWORD"),
+            dbname=os.getenv("DB_NAME"),
+            port=int(os.getenv("PSQLPORT")),
        )
+        return db
     except Exception as e:
-        print(f"Error conectando a la base de datos: {e}")
-        raise
-    # Aumentar timeout de lock y usar isolation más seguro
-    cur = db.cursor()
-    try:
-        cur.execute("SET innodb_lock_wait_timeout = 20")
-        cur.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
-    finally:
-        cur.close()
-    return db
-
+        app.logger.exception('Error connecting to database')
+        raise e 
+    
 
 def has_fecha_modificacion():
     """Check (and cache) whether the `lineas` table has a `fecha_modificacion` column."""
@@ -988,7 +977,7 @@ def cambiar_plan(linea_id):
                 sql = "UPDATE lineas SET id_plan = %s WHERE id_linea = %s"
             cur.execute(sql, (id_plan_nuevo, linea_id))
             break  # Success, exit loop
-        except mysql.connector.errors.DatabaseError as e:
+        except psycopg2.DatabaseError as e:
             if "Lock wait timeout" in str(e) and attempt < max_retries - 1:
                 time.sleep(0.5)  # Wait 0.5 seconds before retry
                 continue
@@ -1061,7 +1050,7 @@ def cambiar_operador(linea_id):
                 sql = "UPDATE lineas SET id_operador = %s WHERE id_linea = %s"
             cur.execute(sql, (id_operador_nuevo, linea_id))
             break  # Success, exit loop
-        except mysql.connector.errors.DatabaseError as e:
+        except psycopg2.DatabaseError as e:
             if "Lock wait timeout" in str(e) and attempt < max_retries - 1:
                 time.sleep(0.5)  # Wait 0.5 seconds before retry
                 continue
@@ -1238,7 +1227,7 @@ def asignar_linea(linea_id):
             params.append(linea_id)
             cur.execute(sql, tuple(params))
             break
-        except mysql.connector.errors.DatabaseError as e:
+        except psycopg2.DatabaseError as e:
             if "Lock wait timeout" in str(e) and attempt < 2:
                 time.sleep(0.5)
                 continue
@@ -1347,7 +1336,7 @@ def devolver_linea(linea_id):
                 sql += " WHERE id_linea = %s"
                 cur.execute(sql, tuple(params))
             break
-        except mysql.connector.errors.DatabaseError as e:
+        except psycopg2.DatabaseError as e:
             if "Lock wait timeout" in str(e) and attempt < 2:
                 time.sleep(0.5)
                 continue
@@ -1426,7 +1415,7 @@ def editar_basico(linea_id):
                     else:
                         cur.execute("UPDATE lineas SET id_tipo_sim = %s WHERE id_linea = %s", (id_tipo_sim, linea_id))
                     break
-                except mysql.connector.errors.DatabaseError as e:
+                except psycopg2.DatabaseError as e:
                     if "Lock wait timeout" in str(e) and attempt < 2:
                         time.sleep(0.5)
                         continue
@@ -1483,7 +1472,7 @@ def editar_basico(linea_id):
                     else:
                         cur.execute("UPDATE lineas SET id_estado = %s WHERE id_linea = %s", (id_estado_guardado, linea_id))
                     break
-                except mysql.connector.errors.DatabaseError as e:
+                except psycopg2.DatabaseError as e:
                     if "Lock wait timeout" in str(e) and attempt < 2:
                         time.sleep(0.5)
                         continue
@@ -1524,7 +1513,7 @@ def editar_basico(linea_id):
                 else:
                     cur.execute("UPDATE lineas SET observacion = %s WHERE id_linea = %s", (observacion or None, linea_id))
                 break
-            except mysql.connector.errors.DatabaseError as e:
+            except psycopg2.DatabaseError as e:
                 if "Lock wait timeout" in str(e) and attempt < 2:
                     time.sleep(0.5)
                     continue
@@ -1721,10 +1710,10 @@ def api_create_usuario():
         new_id = cur.lastrowid
         db.commit()
         # (NO tocar líneas aquí: new_id es id_usuario en este endpoint)
-    except mysql.connector.errors.IntegrityError as e:
+    except psycopg2.IntegrityError as e:
         # Duplicate entry (unique constraint) -> return 409
         try:
-            errno = e.errno
+            errno = e.pgcode
         except Exception:
             errno = None
         msg = str(e)
@@ -1742,7 +1731,7 @@ def api_create_usuario():
                 return make_response(jsonify({"error": f"Usuario '{dupval}' ya existe."}), 409)
             return make_response(jsonify({"error": "Usuario ya existe."}), 409)
         return make_response(jsonify({"error": "Error de integridad en la base de datos."}), 500)
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         print(f"api_create_usuario: DB insert error: {e}")
         traceback.print_exc()
         db.rollback()
@@ -1788,7 +1777,7 @@ def api_create_cargo():
         cur.execute("INSERT INTO cargos (nombre_cargo) VALUES (%s)", (nombre,))
         new_id = cur.lastrowid
         db.commit()
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         print(f"api_create_cargo: DB insert error: {e}")
         db.rollback()
         cur.close(); db.close()
@@ -1992,7 +1981,7 @@ def api_update_usuario(id_usuario):
                         app.logger.exception('Could not update lineas ciudad after usuario update')
             except Exception:
                 app.logger.exception('bulk linea update check failed')
-        except mysql.connector.Error as e:
+        except psycopg2.Error as e:
             db.rollback()
             print(f"api_update_usuario: DB update error: {e}")
             traceback.print_exc()
@@ -2062,7 +2051,7 @@ def api_create_linea():
                         (numero_linea, id_usuario, id_plan, id_tipo_sim, id_estado, id_ciudad, id_jefe, observacion))
         new_id = cur.lastrowid
         db.commit()
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         db.rollback()
         cur.close()
         db.close()
@@ -2178,7 +2167,7 @@ def api_create_plan():
         cur.execute("INSERT INTO planes (nombre_plan, gigas, precio_mensual) VALUES (%s, %s, %s)", (nombre, gigas, precio))
         new_id = cur.lastrowid
         db.commit()
-    except mysql.connector.Error:
+    except psycopg2.Error:
         db.rollback()
         cur.close()
         db.close()
@@ -3130,11 +3119,11 @@ def api_create_jefe():
         for rid in regional_ids:
             cur.execute("INSERT IGNORE INTO jefe_regional (id_jefe, id_regional) VALUES (%s, %s)", (new_id, int(rid)))
         db.commit()
-    except mysql.connector.Error:
+    except psycopg2.Error:
         db.rollback()
         cur.close()
         db.close()
-        app.logger.exception('MySQL error creating jefe')
+        app.logger.exception('PostgreSQL error creating jefe')
         return make_response(jsonify({"error": "Error interno de base de datos."}), 500)
     except Exception:
         db.rollback()
@@ -3231,8 +3220,8 @@ def api_update_jefe(id_jefe):
         for rid in regional_ids:
             cur.execute("INSERT IGNORE INTO jefe_regional (id_jefe, id_regional) VALUES (%s, %s)", (id_jefe, int(rid)))
         db.commit()
-    except mysql.connector.Error:
-        db.rollback(); cur.close(); db.close(); app.logger.exception('MySQL error updating jefe');
+    except psycopg2.Error:
+        db.rollback(); cur.close(); db.close(); app.logger.exception('PostgreSQL error updating jefe');
         return make_response(jsonify({"error": "Error interno de base de datos."}), 500)
     except Exception:
         db.rollback(); cur.close(); db.close(); app.logger.exception('Unexpected error updating jefe');
@@ -3310,7 +3299,7 @@ def api_create_regional():
         cur.execute("INSERT INTO regionales (nombre_regional) VALUES (%s)", (nombre,))
         new_id = cur.lastrowid
         db.commit()
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         print(f"api_create_regional: DB insert error: {e}")
         db.rollback()
         cur.close()
@@ -3356,11 +3345,11 @@ def api_create_ciudad():
         cur.execute("INSERT INTO ciudades (nombre_ciudad, id_regional) VALUES (%s, %s)", (nombre, id_regional))
         new_id = cur.lastrowid
         db.commit()
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         print(f"api_create_ciudad: DB insert error: {e}")
         db.rollback()
         # Handle duplicate key gracefully: return existing ciudad if it exists
-        if getattr(e, 'errno', None) == 1062:
+        if getattr(e, 'pgcode', None) == '23505':
             try:
                 cur.execute("SELECT id_ciudad, nombre_ciudad FROM ciudades WHERE nombre_ciudad = %s LIMIT 1", (nombre,))
                 existing = cur.fetchone()
