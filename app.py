@@ -64,11 +64,15 @@ def conectar_db():
             dbname=os.getenv("DB_NAME"),
             port=int(os.getenv("PSQLPORT")),
        )
+        db.autocommit = True
+
+        print("✅ Conectado correctamente a PostgreSQL")
+
         return db
+
     except Exception as e:
-        app.logger.exception('Error connecting to database')
-        raise e 
-    
+        print(f"Error conectando a la base de datos: {e}")
+        raise
 
 def has_fecha_modificacion():
     """Check (and cache) whether the `lineas` table has a `fecha_modificacion` column."""
