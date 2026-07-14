@@ -84,9 +84,11 @@ def has_fecha_modificacion():
     try:
         db = conectar_db()
         cur = db.cursor()
-        # Determine database name from connection if available
-        db_name = getattr(db, 'database', None) or 'gestion_lineas'
-        cur.execute("SELECT COUNT(1) FROM information_schema.columns WHERE table_schema = %s AND table_name = 'lineas' AND column_name = 'fecha_modificacion'", (db_name,))
+        cur.execute(
+            "SELECT COUNT(1) FROM information_schema.columns "
+            "WHERE table_name = %s AND column_name = %s",
+            ('lineas', 'fecha_modificacion')
+        )
         exists = cur.fetchone()[0] > 0
     except Exception:
         exists = False
@@ -2298,7 +2300,7 @@ def api_get_lineas():
         has_fmod = has_fecha_modificacion()
         fecha_field = "l.fecha_modificacion AS fecha_modificacion," if has_fmod else ""
 
-        order_clause = "ORDER BY l.fecha_modificacion DESC, l.id_linea DESC" if has_fmod else "ORDER BY l.id_linea DESC"
+        order_clause = "ORDER BY l.fecha_modificacion DESC NULLS LAST, l.id_linea DESC" if has_fmod else "ORDER BY l.id_linea DESC"
 
         sql = f"""
             SELECT 
